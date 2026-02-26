@@ -6,10 +6,184 @@
     <title>Star Assault</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /* ── TOP HUD BAR ──────────────────────────────────── */
+        #hud-top {
+            height: 56px;
+            background: #000;
+            border-bottom: 1px solid #1a1a1a;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Bars (left side) */
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            max-width: 55%;
+        }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .bar-label {
+            font-size: 10px;
+            font-weight: bold;
+            width: 16px;
+            text-align: right;
+            flex-shrink: 0;
+            letter-spacing: 0.5px;
+        }
+        #shield-label { color: #4488ff; }
+        #hp-label     { color: #ff4444; }
+        .bar-track {
+            flex: 1;
+            height: 11px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 6px;
+            transition: width 0.15s ease-out;
+        }
+        #shield-fill { background: #4488ff; }
+        #hp-fill     { background: #44cc44; }
+
+        /* Wave label (centre) */
+        #wave-text {
+            font-size: 12px;
+            font-weight: bold;
+            color: #777;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Score + streak (right side) */
+        .hud-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1px;
+            flex-shrink: 0;
+        }
+        #score-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1;
+        }
+        #streak-text {
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        /* ── GAME CANVAS CONTAINER ────────────────────────── */
+        #game-container {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── BOTTOM HUD BAR ───────────────────────────────── */
+        #hud-bottom {
+            height: 44px;
+            background: #000;
+            border-top: 1px solid #1a1a1a;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        #xp-level {
+            font-size: 11px;
+            font-weight: bold;
+            color: #FF8800;
+            white-space: nowrap;
+            min-width: 30px;
+        }
+        #xp-track {
+            flex: 1;
+            height: 10px;
+            background: #1e1e1e;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(255,136,0,0.3);
+        }
+        #xp-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #FF6600, #FF8800);
+            border-radius: 5px;
+            transition: width 0.2s ease-out;
+        }
+
+        /* ── ANIMATIONS ───────────────────────────────────── */
+        @keyframes shield-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.45; }
+        }
+        #shield-fill.recharging {
+            animation: shield-pulse 0.7s ease-in-out infinite;
+        }
+
+        @keyframes hp-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+        #hp-fill.low-hp {
+            animation: hp-pulse 0.45s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
+    <div id="hud-top">
+        <div class="bar-group">
+            <div class="bar-row">
+                <span class="bar-label" id="shield-label">SH</span>
+                <div class="bar-track"><div class="bar-fill" id="shield-fill"></div></div>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label" id="hp-label">HP</span>
+                <div class="bar-track"><div class="bar-fill" id="hp-fill"></div></div>
+            </div>
+        </div>
+        <div id="wave-text">WAVE 1</div>
+        <div class="hud-right">
+            <div id="score-text">0</div>
+            <div id="streak-text"></div>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div id="hud-bottom">
+        <span id="xp-level">LV 0</span>
+        <div id="xp-track"><div id="xp-fill"></div></div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>
