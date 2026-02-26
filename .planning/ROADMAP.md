@@ -23,16 +23,16 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: Players can instantly read XP orb collection and game state at a glance — no invisible orbs, no cluttered stat strip blocking the play field
 **Depends on**: Nothing (first phase)
 **Requirements**: VISC-01, VISC-03
+**Plans**: 2 plans
 **Success Criteria** (what must be TRUE):
   1. XP orbs are visible against all six background zone colors including the nebula zones where green orbs previously vanished
   2. The bottom stat bar (DMG/RATE/SPD/SH/HP/CRIT/PIER/STK) is gone from the live gameplay HUD — it does not appear anywhere on screen during a wave
   3. HUD shield and health bars animate smoothly when their value changes (no jump-cut redraws)
   4. The magnet trail color and HUD accent colors are consistent with the new orange orb color — no visual mismatch between systems
-**Plans**: TBD
 
 Plans:
-- [ ] 01-01: Switch XP orb color from green to orange/gold across all rendering paths (orb glow layers, magnet trail, HUD accent)
-- [ ] 01-02: Remove bottom stat bar from GameScene/HUD; add dirty-flag guard and scaleX tween to HUD fill bars
+- [ ] 01-01-PLAN.md — Switch XP orb colors to orange/gold (orb glow layers, magnet trail, XP bar, upgrade card accents)
+- [ ] 01-02-PLAN.md — Remove stat bar, migrate streak counter to HUD, add dirty-flag tween proxy to shield and HP bars
 
 ### Phase 2: Ground Drop Icon System
 **Goal**: Players identify ground drop type at a glance from the icon silhouette alone — no reading required, no ambiguity between types
