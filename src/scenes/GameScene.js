@@ -342,6 +342,7 @@ export class GameScene extends Scene {
         this.playerShield
       );
       this.audio.playShieldRecharge();
+      if (this.hud) this.hud.update(this.score, this.hp);
     }
   }
 
