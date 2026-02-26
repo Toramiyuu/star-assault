@@ -12,7 +12,6 @@ const config = {
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        parent: 'game-container',
     },
     physics: {
         default: 'arcade',
@@ -27,3 +26,18 @@ const config = {
 
 const game = new Phaser.Game(config);
 window.__GAME__ = game;
+
+// Size the fixed HUD bars to exactly match the canvas edges (fills letterbox precisely)
+function fitHudBars() {
+    const canvas = document.querySelector('canvas');
+    if (!canvas || canvas.offsetHeight === 0) {
+        requestAnimationFrame(fitHudBars);
+        return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    document.getElementById('hud-top').style.height    = Math.max(0, Math.round(rect.top)) + 'px';
+    document.getElementById('hud-bottom').style.height = Math.max(0, Math.round(window.innerHeight - rect.bottom)) + 'px';
+}
+
+game.events.on('ready', () => requestAnimationFrame(fitHudBars));
+window.addEventListener('resize', fitHudBars);

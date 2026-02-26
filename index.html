@@ -10,24 +10,25 @@
             width: 100%; height: 100%;
             overflow: hidden;
             background: #000;
-            display: flex;
-            flex-direction: column;
             font-family: Arial, Helvetica, sans-serif;
         }
 
-        /* ── TOP HUD BAR ──────────────────────────────────── */
-        #hud-top {
-            height: 56px;
+        /* ── HUD BARS — fixed overlay, height set by JS to match canvas edges ── */
+        #hud-top, #hud-bottom {
+            position: fixed;
+            left: 0; right: 0;
             background: #000;
-            border-bottom: 1px solid #1a1a1a;
             display: flex;
             align-items: center;
             padding: 0 12px;
-            gap: 10px;
-            flex-shrink: 0;
+            z-index: 100;
+            overflow: hidden;
+            height: 0; /* JS sets exact height once canvas is measured */
         }
+        #hud-top    { top: 0;    border-bottom: 1px solid #1a1a1a; gap: 10px; }
+        #hud-bottom { bottom: 0; border-top:    1px solid #1a1a1a; gap: 8px;  }
 
-        /* Bars (left side) */
+        /* Bars (left side of top bar) */
         .bar-group {
             display: flex;
             flex-direction: column;
@@ -35,11 +36,7 @@
             flex: 1;
             max-width: 55%;
         }
-        .bar-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        .bar-row { display: flex; align-items: center; gap: 5px; }
         .bar-label {
             font-size: 10px;
             font-weight: bold;
@@ -67,7 +64,7 @@
         #shield-fill { background: #4488ff; }
         #hp-fill     { background: #44cc44; }
 
-        /* Wave label (centre) */
+        /* Wave label (centre of top bar) */
         #wave-text {
             font-size: 12px;
             font-weight: bold;
@@ -76,7 +73,7 @@
             flex-shrink: 0;
         }
 
-        /* Score + streak (right side) */
+        /* Score + streak (right side of top bar) */
         .hud-right {
             display: flex;
             flex-direction: column;
@@ -97,26 +94,7 @@
             white-space: nowrap;
         }
 
-        /* ── GAME CANVAS CONTAINER ────────────────────────── */
-        #game-container {
-            flex: 1;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* ── BOTTOM HUD BAR ───────────────────────────────── */
-        #hud-bottom {
-            height: 44px;
-            background: #000;
-            border-top: 1px solid #1a1a1a;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            gap: 8px;
-            flex-shrink: 0;
-        }
+        /* Bottom bar: level + XP */
         #xp-level {
             font-size: 11px;
             font-weight: bold;
@@ -140,22 +118,18 @@
             transition: width 0.2s ease-out;
         }
 
-        /* ── ANIMATIONS ───────────────────────────────────── */
+        /* ── Animations ──────────────────────────────────── */
         @keyframes shield-pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.45; }
         }
-        #shield-fill.recharging {
-            animation: shield-pulse 0.7s ease-in-out infinite;
-        }
+        #shield-fill.recharging { animation: shield-pulse 0.7s ease-in-out infinite; }
 
         @keyframes hp-pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.3; }
         }
-        #hp-fill.low-hp {
-            animation: hp-pulse 0.45s ease-in-out infinite;
-        }
+        #hp-fill.low-hp { animation: hp-pulse 0.45s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -176,8 +150,6 @@
             <div id="streak-text"></div>
         </div>
     </div>
-
-    <div id="game-container"></div>
 
     <div id="hud-bottom">
         <span id="xp-level">LV 0</span>
