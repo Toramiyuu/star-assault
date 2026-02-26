@@ -1,33 +1,33 @@
 import { GAME } from '../config/constants.js';
 
 // ── Layout constants (all HUD coordinates in 1080x1920 canvas px) ──────────
-const BAR_W    = 560;   // shield/HP bar width   (was 220 — renders 194px CSS at 375px viewport)
-const BAR_H    = 30;    // shield/HP bar height  (was 14  — renders ~10px CSS, visible bar)
+const BAR_W    = 320;   // shield/HP bar width   (reduced from 560 — still readable, less intrusive)
+const BAR_H    = 18;    // shield/HP bar height  (reduced from 30  — slim bar, less coverage)
 const BAR_X    = 80;    // bar left edge         (was 60)
-const SHIELD_Y = 160;   // shield bar center Y   (was 24  — below notch safe zone)
-const HEALTH_Y = 200;   // HP bar center Y       (was 44  — 40px gap between bars)
-const CORNER_R = 6;     // border-radius         (was 3   — proportional to larger bar)
+const SHIELD_Y = 80;    // shield bar center Y   (pushed up from 160 — closer to top edge, out of action zone)
+const HEALTH_Y = 106;   // HP bar center Y       (8px gap after 18px bar, from 200)
+const CORNER_R = 6;     // border-radius         (unchanged)
 
 const XP_BAR_W = 920;                            // XP bar width (was 400)
 const XP_BAR_H = 20;                             // XP bar height (was 12)
 const XP_BAR_X = (GAME.WIDTH - XP_BAR_W) / 2;   // centered
-const XP_BAR_Y = 1760;                           // bottom safe zone (was 85 at top)
+const XP_BAR_Y = 1872;                           // very bottom edge (was 1760 — pushes bar to screen bottom)
 
 const BOSS_BAR_W = 700;                          // boss bar width (was 600)
 const BOSS_BAR_H = 28;                           // boss bar height (was 24)
-const BOSS_BAR_Y = 260;                          // below HEALTH_Y cluster (was 110, conflicted with new bars)
+const BOSS_BAR_Y = 140;                          // below HEALTH_Y cluster (was 260 — 26px gap below health bar)
 // boss bar X is always centered: (GAME.WIDTH - BOSS_BAR_W) / 2
 
 export class HUD {
     constructor(scene) {
         this.scene = scene;
 
-        // Dark gradient behind top HUD for readability
+        // Dark gradient behind top HUD for readability — slim strip, gameplay shows through
         const hudBg = scene.add.graphics().setDepth(99).setScrollFactor(0);
-        hudBg.fillStyle(0x000000, 0.5);
-        hudBg.fillRect(0, 0, GAME.WIDTH, 230);   // covers top element cluster including HP bar
-        hudBg.fillStyle(0x000000, 0.25);
-        hudBg.fillRect(0, 230, GAME.WIDTH, 40);  // fade edge
+        hudBg.fillStyle(0x000000, 0.55);
+        hudBg.fillRect(0, 0, GAME.WIDTH, 120);   // covers shield+HP bar cluster (Y=0-120)
+        hudBg.fillStyle(0x000000, 0.20);
+        hudBg.fillRect(0, 120, GAME.WIDTH, 10);  // thin fade edge
 
         this.scoreText = scene.add.text(GAME.WIDTH - 40, 60, '0', {
             fontFamily: 'Arial',
@@ -118,10 +118,10 @@ export class HUD {
             strokeThickness: 2,
         }).setOrigin(0, 0).setDepth(101).setScrollFactor(0);
 
-        // XP bar background at bottom safe zone
+        // XP bar background at bottom — thin semi-transparent strip, not a gameplay-covering panel
         const xpBotGrad = scene.add.graphics().setDepth(99).setScrollFactor(0);
-        xpBotGrad.fillStyle(0x000000, 0.45);
-        xpBotGrad.fillRect(0, XP_BAR_Y - XP_BAR_H - 20, GAME.WIDTH, XP_BAR_H + 50);
+        xpBotGrad.fillStyle(0x000000, 0.40);
+        xpBotGrad.fillRect(0, XP_BAR_Y - XP_BAR_H / 2 - 4, GAME.WIDTH, XP_BAR_H + 8);  // 28px total (XP_BAR_H + 8px padding)
 
         this.xpBarBg.fillStyle(0x333333, 0.8);
         this.xpBarBg.fillRect(XP_BAR_X, XP_BAR_Y - XP_BAR_H / 2, XP_BAR_W, XP_BAR_H);
