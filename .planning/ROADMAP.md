@@ -96,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. HUD Foundations + XP Orb Clarity | 4/4 | Complete   | 2026-02-26 |
+| 1. HUD Foundations + XP Orb Clarity | 4/4 | Complete    | 2026-02-26 |
 | 2. Ground Drop Icon System | 0/1 | Not started | - |
 | 3. Weapon Visual Feedback | 0/3 | Not started | - |
 | 4. Floating Text + Combat Polish | 0/2 | Not started | - |
