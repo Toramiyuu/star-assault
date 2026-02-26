@@ -78,4 +78,4 @@ Deferred to future milestones. Not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 — 01-01 complete: VISC-01 marked complete*
+*Last updated: 2026-02-26 — 01-03 complete: VISC-03 confirmed (gap-01 closure — HUD bar tween proxy fix ships the animation behavior VISC-03 requires)*
