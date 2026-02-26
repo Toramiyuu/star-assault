@@ -28,13 +28,13 @@
         #hud-top    { top: 0;    border-bottom: 1px solid #1a1a1a; gap: 10px; }
         #hud-bottom { bottom: 0; border-top:    1px solid #1a1a1a; gap: 8px;  }
 
-        /* Bars (left side of top bar) */
+        /* Pip group (left side of top bar) */
         .bar-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
             flex: 1;
-            max-width: 55%;
+            max-width: 60%;
         }
         .bar-row { display: flex; align-items: center; gap: 5px; }
         .bar-label {
@@ -47,22 +47,40 @@
         }
         #shield-label { color: #4488ff; }
         #hp-label     { color: #ff4444; }
-        .bar-track {
+
+        /* Pips container */
+        .pip-row {
+            display: flex;
+            align-items: center;
+            gap: 3px;
             flex: 1;
-            height: 11px;
-            background: #1e1e1e;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: nowrap;
         }
-        .bar-fill {
-            height: 100%;
-            width: 100%;
-            border-radius: 6px;
-            transition: width 0.15s ease-out;
+        .pip {
+            width: 18px;
+            height: 13px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+            transition: background 0.1s ease-out, opacity 0.1s ease-out;
         }
-        #shield-fill { background: #4488ff; }
-        #hp-fill     { background: #44cc44; }
+        .pip.empty         { background: #1e1e1e; }
+        .pip.filled-shield { background: #4488ff; }
+        .pip.filled-hp     { background: #44cc44; } /* overridden inline for color gradient */
+
+        /* Low-HP pip pulse */
+        @keyframes hp-pip-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+        .pip.filled-hp.low-hp { animation: hp-pip-pulse 0.45s ease-in-out infinite; }
+
+        /* Shield recharge pulse */
+        @keyframes shield-pip-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.45; }
+        }
+        .pip.filled-shield.recharging { animation: shield-pip-pulse 0.7s ease-in-out infinite; }
 
         /* Wave label (centre of top bar) */
         #wave-text {
