@@ -9,14 +9,26 @@ import { ScoreManager } from "../systems/ScoreManager.js";
 import { AudioManager } from "../systems/AudioManager.js";
 import { BossManager } from "../systems/BossManager.js";
 import { createSeededRandom } from "../systems/SeededRandom.js";
+import {
+  createPlayer,
+  updateExhaust,
+  handleInput,
+  playerDeath,
+  getClosestEnemy,
+} from "./GameScenePlayer.js";
+import { setupCollisions } from "./GameSceneCollisions.js";
+import { handleDevKey } from "./GameSceneDevTools.js";
+import { PlayerStats } from "../systems/PlayerStats.js";
+import { XPManager } from "../systems/XPManager.js";
+import { UpgradeManager } from "../systems/UpgradeManager.js";
+import { WeaponManager } from "../systems/WeaponManager.js";
+import { GroundDropManager } from "../systems/GroundDropManager.js";
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-const PLAYER_SCALE = 0.1;
-const BULLET_SCALE = 0.08;
 const ENEMY_BULLET_SCALE = 0.15;
+
+// Shield recharge constants
+const SHIELD_RECHARGE_COOLDOWN = 4000; // 4s after last damage
+const SHIELD_RECHARGE_RATE = 1000; // 1 charge per second
 
 export class GameScene extends Scene {
   constructor() {
@@ -30,34 +42,53 @@ export class GameScene extends Scene {
 
     this.scoreManager = new ScoreManager();
     this.score = 0;
-    this.hp = PLAYER.MAX_HP;
     this.isInvulnerable = false;
     this.isGameOver = false;
     this.godMode = false;
+    this.cutscenePlaying = false;
     this.lastFireTime = 0;
     this.touchTarget = null;
     this.shieldActive = false;
 
+    // Upgrade system
+    this.playerStats = new PlayerStats(this);
+    this.xpManager = new XPManager(this, this.random);
+    this.upgradeManager = new UpgradeManager(this, this.random);
+    this.weaponManager = new WeaponManager(this);
+    this.upgradePaused = false;
+
+    // HP uses playerCurrentHP from PlayerStats reset
+    this.hp = this.playerCurrentHP || this.playerMaxHP || 5;
+
+    // Shield recharge state
+    this.shieldDamageCooldown = 0; // ms since last damage
+    this.shieldRechargeTimer = 0;
+    this.shieldRecharging = false;
+
     this.audio = new AudioManager();
-    this.audio.init();
+    this.audio.init(this);
     this.bg = new ScrollingBackground(this);
     this.explosions = new Explosions(this);
     this.hud = new HUD(this);
     this.boss = new BossManager(this, this.random);
 
-    this.createPlayer();
+    createPlayer(this);
     this.createBulletGroups();
+    this.weaponManager.init();
     this.enemies = this.physics.add.group({ runChildUpdate: false });
 
     this.powerups = new PowerUpManager(this, this.random);
     this.waveManager = new WaveManager(this, this.random);
+    this.groundDrops = new GroundDropManager(this, this.random);
 
     this.setupInput();
-    this.setupCollisions();
+    setupCollisions(this);
+    this.enemyHPBars = this.add.graphics().setDepth(50);
 
     if (this.devMode) {
+      this.godMode = true;
       this.add
-        .text(8, 8, "DEV | no dmg | B=boss", {
+        .text(8, 8, "DEV  I=god  B=boss  N=next  K=kill  U=lvlup  X=+50xp", {
           fontFamily: "Arial",
           fontSize: "20px",
           color: "#ff4444",
@@ -106,30 +137,10 @@ export class GameScene extends Scene {
     });
   }
 
-  createPlayer() {
-    this.player = this.physics.add.image(GAME.WIDTH / 2, 1600, "player");
-    this.player.setScale(PLAYER_SCALE).setCollideWorldBounds(true).setDepth(10);
-    this.player.body.setSize(this.player.width * 0.6, this.player.height * 0.7);
-    this.exhaustFrame = 0;
-    this.exhaustTimer = 0;
-    this.exhaust = this.add.image(GAME.WIDTH / 2, 1645, "exhaust_0");
-    this.exhaust.setScale(PLAYER_SCALE * 0.8).setDepth(9);
-  }
-
-  updateExhaust(delta) {
-    this.exhaustTimer += delta;
-    if (this.exhaustTimer > 50) {
-      this.exhaustTimer = 0;
-      this.exhaustFrame = (this.exhaustFrame + 1) % 10;
-      this.exhaust.setTexture(`exhaust_${this.exhaustFrame}`);
-    }
-    this.exhaust.setPosition(this.player.x, this.player.y + 45);
-  }
-
   createBulletGroups() {
     this.playerBullets = this.physics.add.group({
       defaultKey: "player_bullet_1",
-      maxSize: 60,
+      maxSize: 100,
       runChildUpdate: true,
     });
     this.enemyBullets = this.physics.add.group({
@@ -137,97 +148,6 @@ export class GameScene extends Scene {
       maxSize: 80,
       runChildUpdate: true,
     });
-  }
-
-  firePlayerBullet() {
-    this.scoreManager.shotsFired++;
-    const spread = this.powerups.has("spread_shot");
-    const offsets = spread ? [-30, 0, 30] : [0];
-    for (const ox of offsets) {
-      const b = this.playerBullets.get(this.player.x + ox, this.player.y - 50);
-      if (!b) continue;
-      b.setActive(true).setVisible(true).setScale(BULLET_SCALE);
-      b.body.enable = true;
-      b.setVelocity(spread ? ox * 3 : 0, PLAYER.BULLET_SPEED);
-      b.body.setSize(b.width * 0.4, b.height * 0.6);
-      b.update = function () {
-        if (this.y < -50) {
-          this.setActive(false).setVisible(false);
-          this.body.enable = false;
-        }
-      };
-    }
-
-    if (this.powerups.has("missile")) {
-      const target = this.getClosestEnemy();
-      if (target) {
-        const m = this.playerBullets.get(this.player.x, this.player.y - 40);
-        if (m) {
-          m.setActive(true)
-            .setVisible(true)
-            .setScale(BULLET_SCALE * 0.8)
-            .setTint(0xff4444);
-          m.body.enable = true;
-          const angle = Math.atan2(
-            target.y - this.player.y,
-            target.x - this.player.x,
-          );
-          m.setVelocity(Math.cos(angle) * 600, Math.sin(angle) * 600);
-          m.body.setSize(m.width * 0.4, m.height * 0.6);
-          m.update = function () {
-            if (
-              this.y < -50 ||
-              this.y > GAME.HEIGHT + 50 ||
-              this.x < -50 ||
-              this.x > GAME.WIDTH + 50
-            ) {
-              this.setActive(false).setVisible(false);
-              this.body.enable = false;
-            }
-          };
-        }
-      }
-    }
-    this.audio.playShoot();
-  }
-
-  getClosestEnemy() {
-    let closest = null,
-      minDist = Infinity;
-    this.enemies.getChildren().forEach((e) => {
-      if (!e.active) return;
-      const d = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
-      if (d < minDist) {
-        minDist = d;
-        closest = e;
-      }
-    });
-    if (this.boss.active && this.boss.sprite?.active) {
-      const d =
-        Math.abs(this.boss.sprite.x - this.player.x) +
-        Math.abs(this.boss.sprite.y - this.player.y);
-      if (d < minDist) closest = this.boss.sprite;
-    }
-    return closest;
-  }
-
-  fireEnemyBullet(enemy) {
-    const b = this.enemyBullets.get(enemy.x, enemy.y + 30);
-    if (!b) return;
-    b.setActive(true).setVisible(true).setScale(ENEMY_BULLET_SCALE);
-    b.body.enable = true;
-    b.setVelocityY(ENEMIES.BULLET_SPEED);
-    b.body.setSize(b.width * 0.5, b.height * 0.5);
-    b.update = function () {
-      if (this.y > GAME.HEIGHT + 50) {
-        this.setActive(false).setVisible(false);
-        this.body.enable = false;
-      }
-    };
-  }
-
-  spawnBoss(bossKey, hp) {
-    this.boss.spawn(bossKey, hp);
   }
 
   setupInput() {
@@ -248,156 +168,139 @@ export class GameScene extends Scene {
     this.input.on("pointerup", () => {
       this.touchTarget = null;
     });
-    this.input.keyboard.on("keydown-B", () => {
-      if (!this.isGameOver) this.skipToBoss();
-    });
-    this.input.keyboard.on("keydown-I", () => {
-      this.godMode = !this.godMode;
-      this.showFloatingText(
-        GAME.WIDTH / 2,
-        GAME.HEIGHT / 2,
-        this.godMode ? "GOD MODE ON" : "GOD MODE OFF",
-        this.godMode ? "#00ff00" : "#ff4444",
-      );
-    });
-  }
-
-  skipToBoss() {
-    if (this.waveManager.spawnTimer) {
-      this.waveManager.spawnTimer.destroy();
-      this.waveManager.spawnTimer = null;
-    }
-    this.enemies.getChildren().forEach((e) => e.destroy());
-    this.enemyBullets.getChildren().forEach((b) => {
-      b.setActive(false).setVisible(false);
-      b.body.enable = false;
-    });
-    this.waveManager.currentWave = 9;
-    this.waveManager.waveActive = false;
-    this.waveManager.enemiesRemaining = 0;
-    this.waveManager.spawnQueue = [];
-    this.waveManager.startNextWave();
-  }
-
-  handleInput(delta) {
-    const speed = PLAYER.SPEED * (delta / 16) * 60;
-    if (this.touchTarget) {
-      const dx = this.touchTarget.x - this.player.x;
-      const dy = this.touchTarget.y - 60 - this.player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > 5) {
-        const ms = Math.min(speed, dist);
-        this.player.x += (dx / dist) * ms;
-        this.player.y += (dy / dist) * ms;
+    this._devKeyState = {};
+    this._onDevKeyDown = (e) => {
+      const key = e.key.toUpperCase();
+      if (!this._devKeyState[key]) {
+        this._devKeyState[key] = true;
+        handleDevKey(this, key);
       }
-    }
-    let kbX = 0,
-      kbY = 0;
-    if (this.cursors.left.isDown || this.wasd.left.isDown) kbX = -1;
-    if (this.cursors.right.isDown || this.wasd.right.isDown) kbX = 1;
-    if (this.cursors.up.isDown || this.wasd.up.isDown) kbY = -1;
-    if (this.cursors.down.isDown || this.wasd.down.isDown) kbY = 1;
-    if (kbX || kbY) {
-      const len = Math.sqrt(kbX * kbX + kbY * kbY);
-      this.player.x += (kbX / len) * speed;
-      this.player.y += (kbY / len) * speed;
-    }
-    this.player.x = clamp(this.player.x, 40, GAME.WIDTH - 40);
-    this.player.y = clamp(this.player.y, 40, GAME.HEIGHT - 40);
+    };
+    this._onDevKeyUp = (e) => {
+      this._devKeyState[e.key.toUpperCase()] = false;
+    };
+    window.addEventListener("keydown", this._onDevKeyDown);
+    window.addEventListener("keyup", this._onDevKeyUp);
   }
 
-  setupCollisions() {
-    this.physics.add.overlap(
-      this.playerBullets,
-      this.enemies,
-      this.onBulletHitEnemy,
-      null,
-      this,
-    );
-    this.physics.add.overlap(
-      this.enemyBullets,
-      this.player,
-      this.onEnemyBulletHitPlayer,
-      null,
-      this,
-    );
-    this.physics.add.overlap(
-      this.enemies,
-      this.player,
-      this.onEnemyHitPlayer,
-      null,
-      this,
-    );
-    this.physics.add.overlap(
-      this.powerups.group,
-      this.player,
-      this.onCollectPowerUp,
-      null,
-      this,
-    );
+  spawnBoss(bossKey, hp, instant) {
+    this.boss.spawn(bossKey, hp, instant);
   }
 
-  onBulletHitEnemy(bullet, enemy) {
-    if (!bullet.active || !enemy.active) return;
-    bullet.setActive(false).setVisible(false);
-    bullet.body.enable = false;
-    this.scoreManager.shotsHit++;
-    let hp = enemy.getData("hp") - 1;
-    enemy.setData("hp", hp);
-    if (hp <= 0) {
-      const isMine = enemy.getData("isMine");
-      const isElite = enemy.getData("isElite");
-      const killType = isMine ? "mine" : isElite ? "elite" : "basic";
-      const pts =
-        this.scoreManager.addKill(killType) *
-        this.powerups.getScoreMultiplier();
-      this.score = this.scoreManager.score;
-      this.explosions.play(enemy.x, enemy.y, "enemy_explosion", 9, 0.12);
-      this.audio.playEnemyExplosion();
-      this.cameras.main.shake(80, 0.003);
-      this.showFloatingText(enemy.x, enemy.y - 30, `+${pts}`, "#ffffff");
-      if (!isMine) this.powerups.tryDrop(enemy.x, enemy.y);
-      enemy.destroy();
-      this.waveManager.onEnemyRemoved();
+  fireEnemyBullet(enemy) {
+    const b = this.enemyBullets.get(enemy.x, enemy.y);
+    if (!b) return;
+    b.setActive(true).setVisible(true).setScale(ENEMY_BULLET_SCALE).setTintFill(0xff4444);
+    b.body.enable = true;
+    // Aim toward player
+    const player = this.player;
+    if (player?.active) {
+      const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      b.setVelocity(
+        Math.cos(angle) * ENEMIES.BULLET_SPEED,
+        Math.sin(angle) * ENEMIES.BULLET_SPEED,
+      );
     } else {
-      enemy.setTint(0xff0000);
-      this.time.delayedCall(80, () => {
-        if (enemy.active) enemy.clearTint();
-      });
+      b.setVelocityY(ENEMIES.BULLET_SPEED);
     }
-  }
-
-  onEnemyBulletHitPlayer(_player, bullet) {
-    if (!bullet.active) return;
-    bullet.setActive(false).setVisible(false);
-    bullet.body.enable = false;
-    this.damagePlayer();
-  }
-
-  onEnemyHitPlayer(_player, enemy) {
-    if (!enemy.active) return;
-    this.explosions.play(enemy.x, enemy.y, "enemy_explosion", 9, 0.12);
-    enemy.destroy();
-    this.waveManager.onEnemyRemoved();
-    this.damagePlayer();
-  }
-
-  onCollectPowerUp(_player, powerup) {
-    if (!powerup.active) return;
-    this.powerups.collect(powerup);
-    this.scoreManager.addPowerup();
-    this.score = this.scoreManager.score;
+    b.body.setSize(b.width * 0.5, b.height * 0.5);
+    b.update = function () {
+      if (
+        this.y > GAME.HEIGHT + 50 ||
+        this.y < -50 ||
+        this.x < -50 ||
+        this.x > GAME.WIDTH + 50
+      ) {
+        this.setActive(false).setVisible(false);
+        this.body.enable = false;
+      }
+    };
   }
 
   damagePlayer() {
-    if (this.godMode || this.isInvulnerable || this.isGameOver) return;
+    if (
+      this.godMode ||
+      this.isInvulnerable ||
+      this.isGameOver ||
+      this.cutscenePlaying
+    )
+      return;
+
+    // Reset shield recharge cooldown on any damage
+    this.shieldDamageCooldown = 0;
+    this.shieldRechargeTimer = 0;
+    this.shieldRecharging = false;
+
+    // Reset kill streak
+    if (this.killStreak > 0) {
+      this.showFloatingText(this.player.x, this.player.y - 80, 'STREAK BROKEN', '#999999');
+      this.killStreak = 0;
+      this.killStreakBonus = 0;
+    }
+
+    if (this.playerShieldCurrent > 0) {
+      this.playerShieldCurrent--;
+      this.showFloatingText(this.player.x, this.player.y - 60, 'BLOCKED!', '#44ffff');
+      this.audio.playShieldHit();
+
+      // Camera shake on shield hit
+      this.cameras.main.shake(180, 0.004);
+
+      // Shield break effects
+      if (this.playerShieldCurrent <= 0) {
+        this.showFloatingText(this.player.x, this.player.y - 90, 'SHIELD DOWN!', '#ff4444');
+        this.audio.playShieldBreak();
+        // Brief white flash
+        const flash = this.add.graphics().setDepth(400).setScrollFactor(0);
+        flash.fillStyle(0xffffff, 0.15);
+        flash.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+        this.time.delayedCall(60, () => flash.destroy());
+
+        // Pulsar Shield burst on shield break
+        if (this.upgradeManager?.pulsarBurstDamage > 0) {
+          const burstDmg = this.upgradeManager.pulsarBurstDamage;
+          const radius = 150 * (this.playerBlastArea || 1);
+          this.weaponManager?.damageEnemiesInRadius(this.player.x, this.player.y, radius, burstDmg);
+          this.explosions.play(this.player.x, this.player.y, 'enemy_explosion', 9, 0.15);
+        }
+      }
+      return;
+    }
     if (this.powerups.useShield()) return;
+
+    // Quantum Phase: extended invulnerability
+    if (this.upgradeManager?.quantumPhaseTime > 0) {
+      this.isInvulnerable = true;
+      const phaseTime = this.upgradeManager.quantumPhaseTime;
+      this.time.delayedCall(phaseTime, () => {
+        this.isInvulnerable = false;
+        if (this.player?.active) this.player.setAlpha(1);
+      });
+    }
+
     this.hp--;
     this.waveManager.markDamageTaken();
     this.audio.playPlayerHit();
-    this.cameras.main.shake(150, 0.008);
+    this.cameras.main.shake(180, 0.004);
+
+    // Red edge vignette
+    const vignette = this.add.graphics().setDepth(399).setScrollFactor(0);
+    vignette.fillStyle(0xff0000, 0.12);
+    vignette.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+    this.tweens.add({
+      targets: vignette,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => vignette.destroy(),
+    });
+
     if (this.hp <= 0) {
-      this.playerDeath();
+      if (this.upgradeManager?.checkUndying()) {
+        this.player.setVisible(true);
+        this.player.body.enable = true;
+        return;
+      }
+      playerDeath(this);
       return;
     }
     this.isInvulnerable = true;
@@ -413,28 +316,33 @@ export class GameScene extends Scene {
     });
   }
 
-  playerDeath() {
-    this.isGameOver = true;
-    this.player.setVisible(false);
-    this.player.body.enable = false;
-    this.exhaust.setVisible(false);
-    this.audio.stopMusic();
-    this.scoreManager.waveReached = this.waveManager.currentWave;
-    this.explosions.play(
-      this.player.x,
-      this.player.y,
-      "player_explosion",
-      7,
-      0.15,
-    );
-    this.cameras.main.shake(400, 0.015);
-    this.time.delayedCall(2000, () => {
-      const breakdown = this.scoreManager.getBreakdown();
-      this.scene.start("Results", {
-        breakdown,
-        seed: this.registry.get("seed"),
-      });
-    });
+  updateShieldRecharge(delta) {
+    // No shield regen if shield is full or max shield is 0
+    if (this.playerShield <= 0) return;
+    if (this.playerShieldCurrent >= this.playerShield) {
+      this.shieldRecharging = false;
+      return;
+    }
+
+    this.shieldDamageCooldown += delta;
+
+    // Wait for cooldown before recharging
+    if (this.shieldDamageCooldown < SHIELD_RECHARGE_COOLDOWN) {
+      this.shieldRecharging = false;
+      return;
+    }
+
+    this.shieldRecharging = true;
+    this.shieldRechargeTimer += delta;
+
+    if (this.shieldRechargeTimer >= SHIELD_RECHARGE_RATE) {
+      this.shieldRechargeTimer -= SHIELD_RECHARGE_RATE;
+      this.playerShieldCurrent = Math.min(
+        this.playerShieldCurrent + 1,
+        this.playerShield
+      );
+      this.audio.playShieldRecharge();
+    }
   }
 
   showFloatingText(x, y, text, color) {
@@ -458,26 +366,106 @@ export class GameScene extends Scene {
     });
   }
 
+  drawEnemyHealthBars() {
+    this.enemyHPBars.clear();
+    this.enemies.getChildren().forEach(e => {
+      if (!e.active) return;
+      const hp = e.getData('hp');
+      const maxHP = e.getData('maxHP');
+      if (!maxHP || hp <= 0) return;
+      const ratio = Math.max(0, hp / maxHP);
+      const barW = 50;
+      const barH = 5;
+      const x = e.x - barW / 2;
+      let y = e.y - 45;
+
+      // Draw shield bar above health bar for shielded enemies
+      const shield = e.getData('shield') || 0;
+      const maxShield = e.getData('maxShield') || 0;
+      if (maxShield > 0) {
+        const shieldBarH = 4;
+        const shieldY = y - shieldBarH - 2;
+        // Shield background
+        this.enemyHPBars.fillStyle(0x000000, 0.5);
+        this.enemyHPBars.fillRect(x - 1, shieldY - 1, barW + 2, shieldBarH + 2);
+        // Shield pips
+        if (shield > 0) {
+          const pipW = (barW / maxShield) - 1;
+          for (let i = 0; i < shield; i++) {
+            this.enemyHPBars.fillStyle(0x44ffff, 0.9);
+            this.enemyHPBars.fillRect(x + i * (pipW + 1), shieldY, pipW, shieldBarH);
+          }
+        }
+      }
+
+      // Health bar background
+      this.enemyHPBars.fillStyle(0x000000, 0.5);
+      this.enemyHPBars.fillRect(x - 1, y - 1, barW + 2, barH + 2);
+      const color = ratio > 0.5 ? 0x00ff00 : ratio > 0.25 ? 0xffff00 : 0xff0000;
+      this.enemyHPBars.fillStyle(color, 0.9);
+      this.enemyHPBars.fillRect(x, y, barW * ratio, barH);
+    });
+  }
+
+  shutdown() {
+    if (this._onDevKeyDown) {
+      window.removeEventListener("keydown", this._onDevKeyDown);
+      window.removeEventListener("keyup", this._onDevKeyUp);
+    }
+  }
+
+  updateAimAngle() {
+    if (!this.player?.active) return;
+    const closest = getClosestEnemy(this);
+    if (closest) {
+      this.aimAngle = Math.atan2(
+        closest.y - this.player.y,
+        closest.x - this.player.x,
+      );
+    } else {
+      this.aimAngle = -Math.PI / 2; // straight up
+    }
+    // Ship stays upright — no rotation. Weapons aim via aimAngle independently.
+  }
+
   update(time, delta) {
     if (this.isGameOver) return;
+    if (this.upgradePaused) return;
     this.bg.update(delta);
-    this.handleInput(delta);
-    this.updateExhaust(delta);
+    handleInput(this, delta);
+    updateExhaust(this, delta);
+    this.updateAimAngle();
 
-    const fireRate = PLAYER.FIRE_RATE * this.powerups.getFireRate();
-    if (time - this.lastFireTime > fireRate) {
-      this.lastFireTime = time;
-      this.firePlayerBullet();
+    if (!this.cutscenePlaying) {
+      this.weaponManager.update(time, delta);
     }
 
+    this.waveManager.update(time, delta);
     this.boss.update(time, delta);
     this.enemies.getChildren().forEach((e) => {
       if (e.active) this.waveManager.updateEnemy(e, time);
     });
 
-    this.powerups.update();
-    this.powerups.drawGlow();
+    // Shield recharge
+    this.updateShieldRecharge(delta);
+
+    // Ground drops
+    if (this.groundDrops) {
+      this.groundDrops.update(time, delta);
+    }
+
+    this.drawEnemyHealthBars();
     this.hud.update(this.score, this.hp);
-    this.scoreManager.scoreMultiplier = this.powerups.getScoreMultiplier();
+    this.xpManager.update(time, delta);
+    this.hud.updateStreak(this.killStreak || 0);
+    if (this.upgradeManager) {
+      this.upgradeManager.updateVoidShield(delta);
+    }
+    if (this.hud.updateXPBar && this.xpManager) {
+      this.hud.updateXPBar(this.xpManager.xp, this.xpManager.getThreshold(), this.xpManager.level);
+    }
+
+    // Kill streak bonus: fire rate boost
+    this.killStreakBonus = Math.min(0.5, (this.killStreak || 0) * 0.025);
   }
 }

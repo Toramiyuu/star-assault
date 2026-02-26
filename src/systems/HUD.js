@@ -92,6 +92,16 @@ export class HUD {
         this.bossBarBg = null;
         this.bossBarFill = null;
         this.bossLabel = null;
+
+        // Kill streak counter (migrated from StatBar)
+        this.streakText = scene.add.text(GAME.WIDTH - 40, 10, '', {
+            fontFamily: 'Arial',
+            fontSize: '28px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
+        }).setOrigin(1, 0).setDepth(101).setScrollFactor(0);
     }
 
     _drawBarBg(gfx, x, y, borderColor) {
@@ -227,5 +237,26 @@ export class HUD {
         if (this.bossBarBg) { this.bossBarBg.destroy(); this.bossBarBg = null; }
         if (this.bossBarFill) { this.bossBarFill.destroy(); this.bossBarFill = null; }
         if (this.bossLabel) { this.bossLabel.destroy(); this.bossLabel = null; }
+    }
+
+    updateStreak(streak) {
+        if (streak <= 0) {
+            this.streakText.setVisible(false);
+        } else {
+            this.streakText.setVisible(true);
+            if (streak >= 20) {
+                this.streakText.setText(`x${streak} UNSTOPPABLE`);
+                this.streakText.setColor('#ff4444');
+                this.streakText.setFontSize(32);
+            } else if (streak >= 10) {
+                this.streakText.setText(`x${streak} ON FIRE`);
+                this.streakText.setColor('#ff8800');
+                this.streakText.setFontSize(30);
+            } else {
+                this.streakText.setText(`x${streak}`);
+                this.streakText.setColor('#ffffff');
+                this.streakText.setFontSize(28);
+            }
+        }
     }
 }
