@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** The game must feel polished and satisfying — clear visual feedback on every action, intuitive HUD at a glance, instantly recognizable power-ups without reading text
-**Current focus:** Phase 1 — HUD Foundations + XP Orb Clarity (COMPLETE, all gaps closed) — Phase 1.1 next
+**Current focus:** Phase 1.1 — HUD Layout Rethink (IN PROGRESS — Plan 1 of 2 complete)
 
 ## Current Position
 
-Phase: 1 of 4 (HUD Foundations + XP Orb Clarity) — COMPLETE (gap-01, gap-02, gap-03 all closed)
-Plan: 4 of 4 in current phase — COMPLETE
-Status: Phase 1 fully complete (all plans including gap-closure plans 01-03, 01-04), ready for Phase 1.1
-Last activity: 2026-02-26 — Completed plan 01-04: HUD update wiring — gap-02 (shield recharge) and gap-03 (pickup) bars now tween upward
+Phase: 1.1 of 4 (HUD Layout Rethink — in progress)
+Plan: 1 of 2 in current phase — Plan 01 COMPLETE, Plan 02 pending
+Status: Phase 1.1 in progress — HUD resized/repositioned (plan 01 done), remaining: plan 02
+Last activity: 2026-02-27 — Completed plan 01.1-01: HUD layout rethink — bars enlarged, repositioned, all coordinates extracted to constants (commit 84ce49e)
 
-Progress: [████░░░░░░] 35%
+Progress: [████░░░░░░] 38%
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: [████░░░░░░] 35%
 | Phase 01-hud-orb-clarity P02 | 4 min | 2 tasks | 3 files |
 | Phase 01-hud-orb-clarity P03 | 2 min | 2 tasks | 1 file |
 | Phase 01-hud-orb-clarity P04 | 2 min | 1 tasks | 2 files |
+| Phase 01.1-hud-layout-rethink P01 | 8 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ Progress: [████░░░░░░] 35%
 - [Phase 01-02]: Dirty-flag tween proxy pattern established: target HUD instance directly, stop active tween before retargeting — prevents animation debt on rapid damage events
 - [Phase 01-03]: Phaser silently skips tween config properties starting with '_' (GetProps.js line 45) — use plain proxy objects with non-underscore property names; _shieldProxy.ratio and _healthProxy.ratio are now the canonical animated values in HUD.js
 - [Phase 01-hud-orb-clarity]: Mutation-site notification: every mutation site (recharge, pickup) calls hud.update() immediately — not relying on next-frame loop pickup
+- [Phase 01.1-hud-layout-rethink]: HUD layout constants: all 13 values extracted to module-level named constants; BAR_W=560 (was 220), SHIELD_Y=160 (was 24), XP_BAR_Y=1760 (was 85 at top), BOSS_BAR_Y=260
+- [Phase 01.1-hud-layout-rethink]: Dirty-flag per-frame guard pattern: _lastShieldRatioDrawn/_lastHealthRatioDrawn skip Graphics.clear()+redraw when ratio unchanged; animated pulses (shieldGlow, lowHpPulsing) still redraw every frame
 
 ### Roadmap Evolution
 
@@ -73,6 +76,6 @@ Progress: [████░░░░░░] 35%
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 01-04-PLAN.md — HUD update wiring: shield recharge + pickup paths now call hud.update() immediately (gap-02, gap-03 closed, commit fd4a165)
+Last session: 2026-02-27
+Stopped at: Completed 01.1-01-PLAN.md — HUD layout rethink: bars resized to 560x30px, repositioned below notch safe zone, XP bar moved to bottom Y=1760, all 13 constants extracted, dirty-flag guards added (commit 84ce49e)
 Resume file: None

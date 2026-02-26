@@ -40,7 +40,7 @@ Plans:
 **Goal:** Players can read all HUD elements at a glance during combat — bars, icons, and counters are sized and positioned for Survivor.io-quality clarity at actual mobile resolution (1080x1920)
 **Depends on:** Phase 1
 **Requirements:** VISC-03
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 **Success Criteria** (what must be TRUE):
   1. Shield and HP bars are large enough to read at a glance during wave combat — no squinting required at 375px CSS width (typical mobile viewport)
   2. All HUD elements are positioned to avoid obscuring the active play area — no critical game objects hidden behind UI during peak combat moments
