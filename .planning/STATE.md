@@ -5,35 +5,40 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** The game must feel polished and satisfying — clear visual feedback on every action, intuitive HUD at a glance, instantly recognizable power-ups without reading text
-**Current focus:** Phase 1 — HUD Foundations + XP Orb Clarity
+**Current focus:** Phase 1 — HUD Foundations + XP Orb Clarity (COMPLETE) — Phase 2 next
 
 ## Current Position
 
-Phase: 1 of 4 (HUD Foundations + XP Orb Clarity)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-26 — Completed plan 01-01: XP orb color green->orange (XPManager, HUD, UpgradeCardUI)
+Phase: 1 of 4 (HUD Foundations + XP Orb Clarity) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Phase 1 complete, ready for Phase 2
+Last activity: 2026-02-26 — Completed plan 01-02: StatBar removed, streak migrated to HUD, tween proxy on shield/HP bars
 
-Progress: [█░░░░░░░░░] 13%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 10 min
-- Total execution time: 0.17 hours
+- Total plans completed: 2
+- Average duration: 7 min
+- Total execution time: 0.24 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-hud-orb-clarity | 1/2 | 10 min | 10 min |
+| 01-hud-orb-clarity | 2/2 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 10 min
-- Trend: Baseline established
+- Last 5 plans: 10 min, 4 min
+- Trend: Fast execution
 
 *Updated after each plan completion*
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01-hud-orb-clarity P01 | 10 min | 3 tasks | 3 files |
+| Phase 01-hud-orb-clarity P02 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -45,6 +50,8 @@ Progress: [█░░░░░░░░░] 13%
 - Roadmap: BitmapText font pipeline needs a 30-min spike before Phase 4 commits to BitmapText approach (Vite build not validated)
 - 01-01: Outer glow only breathes (0xFF6600 with pulse); mid ring steady (0xFF8800, fixed alpha) — avoids size-throb effect
 - 01-01: XP color palette established: outer 0xFF6600, mid 0xFF8800, core 0xFFAA44, trail 0xFF6600, bar/text #FF8800
+- [Phase 01-02]: StatBar.js deleted — 8-stat strip confirmed anti-feature; players cannot read it mid-combat and it wastes bottom-screen real estate
+- [Phase 01-02]: Dirty-flag tween proxy pattern established: target HUD instance directly, stop active tween before retargeting — prevents animation debt on rapid damage events
 
 ### Pending Todos
 
@@ -59,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-01-PLAN.md — XP orb orange color swap complete (commits a04d7fe, c35fe7e)
+Stopped at: Completed 01-02-PLAN.md — StatBar removed, streak migrated to HUD, tween proxy on shield/HP bars (commits 2437137, 31efebe)
 Resume file: None

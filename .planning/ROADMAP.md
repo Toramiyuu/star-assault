@@ -12,7 +12,7 @@ This milestone transforms Star Assault's implemented mechanics into polished, re
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: HUD Foundations + XP Orb Clarity** - Orange XP orbs replace invisible green ones; stat bar removed from live HUD; HUD fill bars switch to scaleX tween with dirty-flag guard
+- [x] **Phase 1: HUD Foundations + XP Orb Clarity** - Orange XP orbs replace invisible green ones; stat bar removed from live HUD; HUD fill bars switch to scaleX tween with dirty-flag guard (completed 2026-02-26)
 - [ ] **Phase 2: Ground Drop Icon System** - Six drop types get distinct visual icons via generateTexture(); text labels eliminated
 - [ ] **Phase 3: Weapon Visual Feedback** - Hit flash, health bar drain tug, death particle bursts, sustained laser glow, AoE kill logic consolidated
 - [ ] **Phase 4: Floating Text + Combat Polish** - FloatingTextManager pool, level-up card slide-in animation, damage numbers on kill/crit events
@@ -86,7 +86,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. HUD Foundations + XP Orb Clarity | 1/2 | In progress | - |
+| 1. HUD Foundations + XP Orb Clarity | 2/2 | Complete   | 2026-02-26 |
 | 2. Ground Drop Icon System | 0/1 | Not started | - |
 | 3. Weapon Visual Feedback | 0/3 | Not started | - |
 | 4. Floating Text + Combat Polish | 0/2 | Not started | - |
