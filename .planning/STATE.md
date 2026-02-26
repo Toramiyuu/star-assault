@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** The game must feel polished and satisfying — clear visual feedback on every action, intuitive HUD at a glance, instantly recognizable power-ups without reading text
-**Current focus:** Phase 1.1 — HUD Layout Rethink (IN PROGRESS — Plan 1 of 2 complete)
+**Current focus:** Phase 2 — Ground Drop Icon System (Phase 1.1 COMPLETE)
 
 ## Current Position
 
-Phase: 1.1 of 4 (HUD Layout Rethink — in progress)
-Plan: 1 of 2 in current phase — Plan 01 COMPLETE, Plan 02 pending
-Status: Phase 1.1 in progress — HUD resized/repositioned (plan 01 done), remaining: plan 02
-Last activity: 2026-02-27 — Completed plan 01.1-01: HUD layout rethink — bars enlarged, repositioned, all coordinates extracted to constants (commit 84ce49e)
+Phase: 2 of 4 (Ground Drop Icon System — next up)
+Plan: 0 of 1 in current phase — Phase 1.1 fully complete, Phase 2 not started
+Status: Phase 1.1 COMPLETE — all four ROADMAP success criteria met with user sign-off
+Last activity: 2026-02-27 — Completed plan 01.1-02: HUD footprint reduction after visual review — bars 320x18, hudBg 130px, xpBotGrad 28px, XP_BAR_Y=1872 (commit 5781aa9)
 
 Progress: [████░░░░░░] 38%
 
@@ -42,6 +42,7 @@ Progress: [████░░░░░░] 38%
 | Phase 01-hud-orb-clarity P03 | 2 min | 2 tasks | 1 file |
 | Phase 01-hud-orb-clarity P04 | 2 min | 1 tasks | 2 files |
 | Phase 01.1-hud-layout-rethink P01 | 8 | 2 tasks | 1 files |
+| Phase 01.1-hud-layout-rethink P02 | 15 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,7 @@ Progress: [████░░░░░░] 38%
 - [Phase 01-hud-orb-clarity]: Mutation-site notification: every mutation site (recharge, pickup) calls hud.update() immediately — not relying on next-frame loop pickup
 - [Phase 01.1-hud-layout-rethink]: HUD layout constants: all 13 values extracted to module-level named constants; BAR_W=560 (was 220), SHIELD_Y=160 (was 24), XP_BAR_Y=1760 (was 85 at top), BOSS_BAR_Y=260
 - [Phase 01.1-hud-layout-rethink]: Dirty-flag per-frame guard pattern: _lastShieldRatioDrawn/_lastHealthRatioDrawn skip Graphics.clear()+redraw when ratio unchanged; animated pulses (shieldGlow, lowHpPulsing) still redraw every frame
+- [Phase 01.1-hud-layout-rethink P02]: Viewport-validated HUD dimensions: BAR_W=320/BAR_H=18 at SHIELD_Y=80/HEALTH_Y=106; backgrounds thin strips (hudBg 130px/0.55alpha, xpBotGrad 28px/0.40alpha); XP_BAR_Y=1872, BOSS_BAR_Y=140
 
 ### Roadmap Evolution
 
@@ -77,5 +79,5 @@ Progress: [████░░░░░░] 38%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 01.1-01-PLAN.md — HUD layout rethink: bars resized to 560x30px, repositioned below notch safe zone, XP bar moved to bottom Y=1760, all 13 constants extracted, dirty-flag guards added (commit 84ce49e)
+Stopped at: Completed 01.1-02-PLAN.md — Phase 1.1 COMPLETE: HUD footprint reduced after visual review — bars 320x18px at Y=80/106, hudBg 130px strip, xpBotGrad 28px strip, XP_BAR_Y=1872, BOSS_BAR_Y=140 (commit 5781aa9). Phase 2 (Ground Drop Icon System) is next.
 Resume file: None

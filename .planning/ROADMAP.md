@@ -40,7 +40,7 @@ Plans:
 **Goal:** Players can read all HUD elements at a glance during combat — bars, icons, and counters are sized and positioned for Survivor.io-quality clarity at actual mobile resolution (1080x1920)
 **Depends on:** Phase 1
 **Requirements:** VISC-03
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 **Success Criteria** (what must be TRUE):
   1. Shield and HP bars are large enough to read at a glance during wave combat — no squinting required at 375px CSS width (typical mobile viewport)
   2. All HUD elements are positioned to avoid obscuring the active play area — no critical game objects hidden behind UI during peak combat moments
@@ -48,8 +48,8 @@ Plans:
   4. HUD layout matches Survivor.io-style conventions: large bars anchored to safe screen edges, minimal clutter in the center play field
 
 Plans:
-- [ ] 01.1-01-PLAN.md — Extract all layout constants, resize bars to 560x30px, reposition shield/HP to Y=160/200, move XP bar to bottom (Y=1760, 920px wide), replace emoji icons with text labels, add dirty-flag fill guards
-- [ ] 01.1-02-PLAN.md — Human visual verification at 375px DevTools viewport (checkpoint)
+- [x] 01.1-01-PLAN.md — Extract all layout constants, resize bars to 560x30px, reposition shield/HP to Y=160/200, move XP bar to bottom (Y=1760, 920px wide), replace emoji icons with text labels, add dirty-flag fill guards
+- [x] 01.1-02-PLAN.md — Human visual verification at 375px DevTools viewport (checkpoint) — issues found and fixed: bars reduced to 320x18, XP_BAR_Y=1872, backgrounds thinned
 
 ### Phase 2: Ground Drop Icon System
 **Goal**: Players identify ground drop type at a glance from the icon silhouette alone — no reading required, no ambiguity between types
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. HUD Foundations + XP Orb Clarity | 4/4 | Complete    | 2026-02-26 |
-| 1.1. HUD Layout Rethink | 0/TBD | Not started | - |
+| 1.1. HUD Layout Rethink | 2/2 | Complete    | 2026-02-27 |
 | 2. Ground Drop Icon System | 0/1 | Not started | - |
 | 3. Weapon Visual Feedback | 0/3 | Not started | - |
 | 4. Floating Text + Combat Polish | 0/2 | Not started | - |
