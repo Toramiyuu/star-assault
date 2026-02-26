@@ -57,6 +57,12 @@ export class HUD {
         this._healthRatio = 1;
         this._shieldRecharging = false;
         this._lowHpPulsing = false;
+        this._shieldRatioCurrent = 1;   // animated display value (tweened)
+        this._healthRatioCurrent = 1;   // animated display value (tweened)
+        this._shieldRatioTarget  = 1;   // actual target value
+        this._healthRatioTarget  = 1;   // actual target value
+        this._shieldTween = null;
+        this._healthTween = null;
 
         this.waveText = scene.add.text(GAME.WIDTH / 2, 40, 'WAVE 1', {
             fontFamily: 'Arial',
@@ -136,14 +142,26 @@ export class HUD {
         // Shield bar
         const shieldMax = scene.playerShield || 3;
         const shieldCur = scene.playerShieldCurrent || 0;
-        const shieldRatio = shieldMax > 0 ? Math.max(0, shieldCur / shieldMax) : 0;
 
+        // Shield fill — dirty-flag tween proxy
+        const shieldRatioNew = shieldMax > 0 ? Math.max(0, shieldCur / shieldMax) : 0;
+        if (shieldRatioNew !== this._shieldRatioTarget) {
+            this._shieldRatioTarget = shieldRatioNew;
+            if (this._shieldTween) { this._shieldTween.stop(); this._shieldTween = null; }
+            this._shieldTween = this.scene.tweens.add({
+                targets: this,
+                _shieldRatioCurrent: shieldRatioNew,
+                duration: 150,
+                ease: 'Power2.easeOut',
+                onComplete: () => { this._shieldTween = null; }
+            });
+        }
         this.shieldBarFill.clear();
-        if (shieldRatio > 0) {
+        if (this._shieldRatioCurrent > 0) {
             this.shieldBarFill.fillStyle(0x4488ff, 1);
             this.shieldBarFill.fillRoundedRect(
                 BAR_X + 1, SHIELD_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * shieldRatio, BAR_H - 2,
+                (BAR_W - 2) * this._shieldRatioCurrent, BAR_H - 2,
                 CORNER_R
             );
         }
@@ -164,12 +182,24 @@ export class HUD {
         // Health bar
         const hpMax = scene.playerMaxHP || 5;
         const hpCur = hp;
-        const healthRatio = hpMax > 0 ? Math.max(0, hpCur / hpMax) : 0;
 
+        // Health fill — dirty-flag tween proxy
+        const healthRatioNew = hpMax > 0 ? Math.max(0, hpCur / hpMax) : 0;
+        if (healthRatioNew !== this._healthRatioTarget) {
+            this._healthRatioTarget = healthRatioNew;
+            if (this._healthTween) { this._healthTween.stop(); this._healthTween = null; }
+            this._healthTween = this.scene.tweens.add({
+                targets: this,
+                _healthRatioCurrent: healthRatioNew,
+                duration: 150,
+                ease: 'Power2.easeOut',
+                onComplete: () => { this._healthTween = null; }
+            });
+        }
         this.healthBarFill.clear();
-        if (healthRatio > 0) {
-            const color = this._getHealthColor(healthRatio);
-            // Low HP pulse
+        if (this._healthRatioCurrent > 0) {
+            const color = this._getHealthColor(this._healthRatioCurrent);
+            // Low HP pulse — uses actual hpCur (not animated ratio) for threshold check
             let alpha = 1;
             if (hpCur <= 1 && hpMax > 1) {
                 alpha = 0.6 + 0.4 * Math.sin(scene.time.now * 0.008);
@@ -177,7 +207,7 @@ export class HUD {
             this.healthBarFill.fillStyle(color, alpha);
             this.healthBarFill.fillRoundedRect(
                 BAR_X + 1, HEALTH_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * healthRatio, BAR_H - 2,
+                (BAR_W - 2) * this._healthRatioCurrent, BAR_H - 2,
                 CORNER_R
             );
         }
