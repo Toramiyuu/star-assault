@@ -57,11 +57,11 @@ export class HUD {
         this._healthRatio = 1;
         this._shieldRecharging = false;
         this._lowHpPulsing = false;
-        this._shieldRatioCurrent = 1;   // animated display value (tweened)
-        this._healthRatioCurrent = 1;   // animated display value (tweened)
-        this._shieldRatioTarget  = 1;   // actual target value
-        this._healthRatioTarget  = 1;   // actual target value
-        this._shieldTween = null;
+        this._shieldProxy = { ratio: 1 };  // tween target — 'ratio' has no underscore prefix so Phaser will tween it
+        this._healthProxy = { ratio: 1 };  // tween target
+        this._shieldRatioTarget = 1;       // dirty-flag comparator (not tweened, underscore OK)
+        this._healthRatioTarget = 1;       // dirty-flag comparator
+        this._shieldTween = null;          // handle for stop-before-retarget
         this._healthTween = null;
 
         this.waveText = scene.add.text(GAME.WIDTH / 2, 40, 'WAVE 1', {
@@ -149,19 +149,19 @@ export class HUD {
             this._shieldRatioTarget = shieldRatioNew;
             if (this._shieldTween) { this._shieldTween.stop(); this._shieldTween = null; }
             this._shieldTween = this.scene.tweens.add({
-                targets: this,
-                _shieldRatioCurrent: shieldRatioNew,
+                targets: this._shieldProxy,
+                ratio: shieldRatioNew,
                 duration: 150,
                 ease: 'Power2.easeOut',
                 onComplete: () => { this._shieldTween = null; }
             });
         }
         this.shieldBarFill.clear();
-        if (this._shieldRatioCurrent > 0) {
+        if (this._shieldProxy.ratio > 0) {
             this.shieldBarFill.fillStyle(0x4488ff, 1);
             this.shieldBarFill.fillRoundedRect(
                 BAR_X + 1, SHIELD_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * this._shieldRatioCurrent, BAR_H - 2,
+                (BAR_W - 2) * this._shieldProxy.ratio, BAR_H - 2,
                 CORNER_R
             );
         }
@@ -189,17 +189,16 @@ export class HUD {
             this._healthRatioTarget = healthRatioNew;
             if (this._healthTween) { this._healthTween.stop(); this._healthTween = null; }
             this._healthTween = this.scene.tweens.add({
-                targets: this,
-                _healthRatioCurrent: healthRatioNew,
+                targets: this._healthProxy,
+                ratio: healthRatioNew,
                 duration: 150,
                 ease: 'Power2.easeOut',
                 onComplete: () => { this._healthTween = null; }
             });
         }
         this.healthBarFill.clear();
-        if (this._healthRatioCurrent > 0) {
-            const color = this._getHealthColor(this._healthRatioCurrent);
-            // Low HP pulse — uses actual hpCur (not animated ratio) for threshold check
+        if (this._healthProxy.ratio > 0) {
+            const color = this._getHealthColor(this._healthProxy.ratio);
             let alpha = 1;
             if (hpCur <= 1 && hpMax > 1) {
                 alpha = 0.6 + 0.4 * Math.sin(scene.time.now * 0.008);
@@ -207,7 +206,7 @@ export class HUD {
             this.healthBarFill.fillStyle(color, alpha);
             this.healthBarFill.fillRoundedRect(
                 BAR_X + 1, HEALTH_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * this._healthRatioCurrent, BAR_H - 2,
+                (BAR_W - 2) * this._healthProxy.ratio, BAR_H - 2,
                 CORNER_R
             );
         }
