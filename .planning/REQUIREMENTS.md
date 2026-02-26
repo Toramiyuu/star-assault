@@ -58,26 +58,24 @@ Deferred to future milestones. Not in current roadmap.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VISC-01 | Phase 1 | Pending |
-| VISC-02 | Phase 2 | Pending |
-| VISC-03 | Phase 1 | Pending |
-| CMBT-01 | Phase 3 | Pending |
-| CMBT-02 | Phase 3 | Pending |
-| CMBT-03 | Phase 3 | Pending |
-| CMBT-04 | Phase 3 | Pending |
-| POL-01 | Phase 4 | Pending |
-| POL-02 | Phase 4 | Pending |
-| POL-03 | Phase 3 | Pending |
+| VISC-01 | Phase 1 — HUD Foundations + XP Orb Clarity | Pending |
+| VISC-03 | Phase 1 — HUD Foundations + XP Orb Clarity | Pending |
+| VISC-02 | Phase 2 — Ground Drop Icon System | Pending |
+| CMBT-01 | Phase 3 — Weapon Visual Feedback | Pending |
+| CMBT-02 | Phase 3 — Weapon Visual Feedback | Pending |
+| CMBT-03 | Phase 3 — Weapon Visual Feedback | Pending |
+| CMBT-04 | Phase 3 — Weapon Visual Feedback | Pending |
+| POL-03 | Phase 3 — Weapon Visual Feedback | Pending |
+| POL-01 | Phase 4 — Floating Text + Combat Polish | Pending |
+| POL-02 | Phase 4 — Floating Text + Combat Polish | Pending |
 
 **Coverage:**
 - v1 requirements: 10 total
 - Mapped to phases: 10
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 — Roadmap created; traceability finalized*
