@@ -136,18 +136,6 @@
             transition: width 0.2s ease-out;
         }
 
-        /* ── Animations ──────────────────────────────────── */
-        @keyframes shield-pulse {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.45; }
-        }
-        #shield-fill.recharging { animation: shield-pulse 0.7s ease-in-out infinite; }
-
-        @keyframes hp-pulse {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.3; }
-        }
-        #hp-fill.low-hp { animation: hp-pulse 0.45s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -155,11 +143,11 @@
         <div class="bar-group">
             <div class="bar-row">
                 <span class="bar-label" id="shield-label">SH</span>
-                <div class="bar-track"><div class="bar-fill" id="shield-fill"></div></div>
+                <div class="pip-row" id="shield-pips"></div>
             </div>
             <div class="bar-row">
                 <span class="bar-label" id="hp-label">HP</span>
-                <div class="bar-track"><div class="bar-fill" id="hp-fill"></div></div>
+                <div class="pip-row" id="hp-pips"></div>
             </div>
         </div>
         <div id="wave-text">WAVE 1</div>

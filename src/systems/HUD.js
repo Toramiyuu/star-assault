@@ -1,8 +1,8 @@
 import { GAME } from '../config/constants.js';
 
 // ── DOM refs — grabbed once at module load ──────────────────────────────────
-const elShieldFill = document.getElementById('shield-fill');
-const elHpFill     = document.getElementById('hp-fill');
+const elShieldPips = document.getElementById('shield-pips');
+const elHpPips     = document.getElementById('hp-pips');
 const elScore      = document.getElementById('score-text');
 const elWave       = document.getElementById('wave-text');
 const elStreak     = document.getElementById('streak-text');
@@ -19,11 +19,13 @@ export class HUD {
         this.scene = scene;
 
         // Dirty-flag cache — skip DOM writes when nothing changed
-        this._lastScore       = -1;
-        this._lastShieldRatio = -1;
-        this._lastHealthRatio = -1;
-        this._shieldRecharging = false;
-        this._lastLowHp       = false;
+        this._lastScore           = -1;
+        this._lastShieldCur       = -1;
+        this._lastShieldMax       = -1;
+        this._lastShieldRecharging = false;
+        this._lastHpCur           = -1;
+        this._lastHpMax           = -1;
+        this._lastLowHp           = false;
 
         // Boss bar (canvas Graphics — kept in-canvas)
         this.bossBarBg   = null;
@@ -40,37 +42,52 @@ export class HUD {
 
         const scene = this.scene;
 
-        // Shield bar
+        // Shield pips
         const shieldMax = scene.playerShield || 3;
-        const shieldCur = scene.playerShieldCurrent || 0;
-        const shieldRatio = shieldMax > 0 ? Math.max(0, shieldCur / shieldMax) : 0;
-        if (shieldRatio !== this._lastShieldRatio) {
-            this._lastShieldRatio = shieldRatio;
-            elShieldFill.style.width = (shieldRatio * 100) + '%';
-        }
-
-        // Shield recharge pulse
+        const shieldCur = Math.max(0, Math.min(scene.playerShieldCurrent || 0, shieldMax));
         const isRecharging = scene.shieldRecharging === true && shieldCur < shieldMax;
-        if (isRecharging !== this._shieldRecharging) {
-            this._shieldRecharging = isRecharging;
-            elShieldFill.classList.toggle('recharging', isRecharging);
+        if (shieldCur !== this._lastShieldCur || shieldMax !== this._lastShieldMax || isRecharging !== this._lastShieldRecharging) {
+            this._lastShieldCur = shieldCur;
+            this._lastShieldMax = shieldMax;
+            this._lastShieldRecharging = isRecharging;
+            this._renderShieldPips(shieldCur, shieldMax, isRecharging);
         }
 
-        // HP bar
+        // HP pips
         const hpMax = scene.playerMaxHP || 5;
-        const hpRatio = hpMax > 0 ? Math.max(0, hp / hpMax) : 0;
-        if (hpRatio !== this._lastHealthRatio) {
-            this._lastHealthRatio = hpRatio;
-            elHpFill.style.width = (hpRatio * 100) + '%';
-            elHpFill.style.background = this._getHealthColor(hpRatio);
-        }
-
-        // Low HP pulse
-        const lowHp = hp <= 1 && hpMax > 1;
-        if (lowHp !== this._lastLowHp) {
+        const hpCur = Math.max(0, Math.min(hp, hpMax));
+        const lowHp = hpCur <= 1 && hpMax > 1;
+        if (hpCur !== this._lastHpCur || hpMax !== this._lastHpMax || lowHp !== this._lastLowHp) {
+            this._lastHpCur = hpCur;
+            this._lastHpMax = hpMax;
             this._lastLowHp = lowHp;
-            elHpFill.classList.toggle('low-hp', lowHp);
+            this._renderHpPips(hpCur, hpMax, lowHp);
         }
+    }
+
+    _renderShieldPips(cur, max, recharging) {
+        let html = '';
+        for (let i = 0; i < max; i++) {
+            if (i < cur) {
+                html += `<div class="pip filled-shield${recharging ? ' recharging' : ''}"></div>`;
+            } else {
+                html += '<div class="pip empty"></div>';
+            }
+        }
+        elShieldPips.innerHTML = html;
+    }
+
+    _renderHpPips(cur, max, lowHp) {
+        const color = this._getHealthColor(max > 0 ? cur / max : 0);
+        let html = '';
+        for (let i = 0; i < max; i++) {
+            if (i < cur) {
+                html += `<div class="pip filled-hp${lowHp ? ' low-hp' : ''}" style="background:${color}"></div>`;
+            } else {
+                html += '<div class="pip empty"></div>';
+            }
+        }
+        elHpPips.innerHTML = html;
     }
 
     _getHealthColor(ratio) {
