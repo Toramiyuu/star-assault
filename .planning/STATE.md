@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 1 of 4 (HUD Foundations + XP Orb Clarity)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-26 — Roadmap created; 10/10 v1 requirements mapped across 4 phases
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-26 — Completed plan 01-01: XP orb color green->orange (XPManager, HUD, UpgradeCardUI)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 13%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 10 min
+- Total execution time: 0.17 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-hud-orb-clarity | 1/2 | 10 min | 10 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 10 min
+- Trend: Baseline established
 
 *Updated after each plan completion*
 
@@ -43,6 +43,8 @@ Progress: [░░░░░░░░░░] 0%
 - Roadmap: Stat bar removal is Phase 1 scope — confirmed anti-feature, belongs in results/pause only
 - Roadmap: CombatUtils.js killEnemy() extraction is Phase 3 prerequisite — AoE kill logic is broken for TwinLaser and bomb kills
 - Roadmap: BitmapText font pipeline needs a 30-min spike before Phase 4 commits to BitmapText approach (Vite build not validated)
+- 01-01: Outer glow only breathes (0xFF6600 with pulse); mid ring steady (0xFF8800, fixed alpha) — avoids size-throb effect
+- 01-01: XP color palette established: outer 0xFF6600, mid 0xFF8800, core 0xFFAA44, trail 0xFF6600, bar/text #FF8800
 
 ### Pending Todos
 
@@ -57,5 +59,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Roadmap created, STATE.md initialized — ready for Phase 1 planning
+Stopped at: Completed 01-01-PLAN.md — XP orb orange color swap complete (commits a04d7fe, c35fe7e)
 Resume file: None

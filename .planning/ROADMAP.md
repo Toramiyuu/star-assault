@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The magnet trail color and HUD accent colors are consistent with the new orange orb color — no visual mismatch between systems
 
 Plans:
-- [ ] 01-01-PLAN.md — Switch XP orb colors to orange/gold (orb glow layers, magnet trail, XP bar, upgrade card accents)
+- [x] 01-01-PLAN.md — Switch XP orb colors to orange/gold (orb glow layers, magnet trail, XP bar, upgrade card accents)
 - [ ] 01-02-PLAN.md — Remove stat bar, migrate streak counter to HUD, add dirty-flag tween proxy to shield and HP bars
 
 ### Phase 2: Ground Drop Icon System
@@ -86,7 +86,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. HUD Foundations + XP Orb Clarity | 0/2 | Not started | - |
+| 1. HUD Foundations + XP Orb Clarity | 1/2 | In progress | - |
 | 2. Ground Drop Icon System | 0/1 | Not started | - |
 | 3. Weapon Visual Feedback | 0/3 | Not started | - |
 | 4. Floating Text + Combat Polish | 0/2 | Not started | - |
