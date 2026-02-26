@@ -1,11 +1,22 @@
 import { GAME } from '../config/constants.js';
 
-const BAR_W = 220;
-const BAR_H = 14;
-const BAR_X = 60;
-const SHIELD_Y = 24;
-const HEALTH_Y = 44;
-const CORNER_R = 3;
+// ── Layout constants (all HUD coordinates in 1080x1920 canvas px) ──────────
+const BAR_W    = 560;   // shield/HP bar width   (was 220 — renders 194px CSS at 375px viewport)
+const BAR_H    = 30;    // shield/HP bar height  (was 14  — renders ~10px CSS, visible bar)
+const BAR_X    = 80;    // bar left edge         (was 60)
+const SHIELD_Y = 160;   // shield bar center Y   (was 24  — below notch safe zone)
+const HEALTH_Y = 200;   // HP bar center Y       (was 44  — 40px gap between bars)
+const CORNER_R = 6;     // border-radius         (was 3   — proportional to larger bar)
+
+const XP_BAR_W = 920;                            // XP bar width (was 400)
+const XP_BAR_H = 20;                             // XP bar height (was 12)
+const XP_BAR_X = (GAME.WIDTH - XP_BAR_W) / 2;   // centered
+const XP_BAR_Y = 1760;                           // bottom safe zone (was 85 at top)
+
+const BOSS_BAR_W = 700;                          // boss bar width (was 600)
+const BOSS_BAR_H = 28;                           // boss bar height (was 24)
+const BOSS_BAR_Y = 260;                          // below HEALTH_Y cluster (was 110, conflicted with new bars)
+// boss bar X is always centered: (GAME.WIDTH - BOSS_BAR_W) / 2
 
 export class HUD {
     constructor(scene) {
@@ -14,30 +25,38 @@ export class HUD {
         // Dark gradient behind top HUD for readability
         const hudBg = scene.add.graphics().setDepth(99).setScrollFactor(0);
         hudBg.fillStyle(0x000000, 0.5);
-        hudBg.fillRect(0, 0, GAME.WIDTH, 120);
+        hudBg.fillRect(0, 0, GAME.WIDTH, 230);   // covers top element cluster including HP bar
         hudBg.fillStyle(0x000000, 0.25);
-        hudBg.fillRect(0, 120, GAME.WIDTH, 40);
+        hudBg.fillRect(0, 230, GAME.WIDTH, 40);  // fade edge
 
-        this.scoreText = scene.add.text(GAME.WIDTH - 40, 40, '0', {
+        this.scoreText = scene.add.text(GAME.WIDTH - 40, 60, '0', {
             fontFamily: 'Arial',
-            fontSize: '48px',
+            fontSize: '52px',
             color: '#ffffff',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 4,
         }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
 
-        // Shield icon
-        this.shieldIcon = scene.add.text(BAR_X - 30, SHIELD_Y, '\u{1F6E1}', {
+        // Shield icon — text label instead of emoji for cross-platform consistency
+        this.shieldIcon = scene.add.text(BAR_X - 10, SHIELD_Y, 'SH', {
             fontFamily: 'Arial',
-            fontSize: '16px',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+            fontSize: '28px',
+            color: '#4488ff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2,
+        }).setOrigin(1, 0.5).setDepth(101).setScrollFactor(0);
 
-        // Health icon
-        this.healthIcon = scene.add.text(BAR_X - 30, HEALTH_Y, '\u{2764}', {
+        // Health icon — text label instead of emoji
+        this.healthIcon = scene.add.text(BAR_X - 10, HEALTH_Y, 'HP', {
             fontFamily: 'Arial',
-            fontSize: '16px',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+            fontSize: '28px',
+            color: '#ff4444',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2,
+        }).setOrigin(1, 0.5).setDepth(101).setScrollFactor(0);
 
         // Shield bar graphics
         this.shieldBarBg = scene.add.graphics().setDepth(100).setScrollFactor(0);
@@ -64,50 +83,54 @@ export class HUD {
         this._shieldTween = null;          // handle for stop-before-retarget
         this._healthTween = null;
 
-        this.waveText = scene.add.text(GAME.WIDTH / 2, 40, 'WAVE 1', {
+        // Per-frame dirty-flag tracking for fill redraws
+        this._lastShieldRatioDrawn = -1;   // dirty-flag: last ratio actually rendered to shieldBarFill
+        this._lastHealthRatioDrawn = -1;   // dirty-flag: last ratio actually rendered to healthBarFill
+
+        this.waveText = scene.add.text(GAME.WIDTH / 2, 60, 'WAVE 1', {
             fontFamily: 'Arial',
-            fontSize: '36px',
+            fontSize: '48px',
             color: '#aaaaaa',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 3,
         }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
 
-        // XP Bar
-        this.xpBarBg = scene.add.graphics().setDepth(100).setScrollFactor(0);
-        this.xpBarFill = scene.add.graphics().setDepth(101).setScrollFactor(0);
-        this.xpLevelText = scene.add.text(GAME.WIDTH / 2 - 200, 85, 'LV 0', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#FF8800',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2,
-        }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0);
-
-        // Draw static XP bar background
-        const xpBarW = 400;
-        const xpBarH = 12;
-        const xpBarX = (GAME.WIDTH - xpBarW) / 2;
-        const xpBarY = 85;
-        this.xpBarBg.fillStyle(0x333333, 0.8);
-        this.xpBarBg.fillRect(xpBarX, xpBarY - xpBarH / 2, xpBarW, xpBarH);
-        this.xpBarBg.lineStyle(1, 0xFF6600, 0.5);
-        this.xpBarBg.strokeRect(xpBarX, xpBarY - xpBarH / 2, xpBarW, xpBarH);
-
-        this.bossBarBg = null;
-        this.bossBarFill = null;
-        this.bossLabel = null;
-
-        // Kill streak counter (migrated from StatBar)
+        // Kill streak counter (top-right, above score)
         this.streakText = scene.add.text(GAME.WIDTH - 40, 10, '', {
             fontFamily: 'Arial',
-            fontSize: '28px',
+            fontSize: '36px',
             color: '#ffffff',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 3,
         }).setOrigin(1, 0).setDepth(101).setScrollFactor(0);
+
+        // XP Bar
+        this.xpBarBg = scene.add.graphics().setDepth(100).setScrollFactor(0);
+        this.xpBarFill = scene.add.graphics().setDepth(101).setScrollFactor(0);
+        this.xpLevelText = scene.add.text(XP_BAR_X, XP_BAR_Y + XP_BAR_H / 2 + 8, 'LV 0', {
+            fontFamily: 'Arial',
+            fontSize: '36px',
+            color: '#FF8800',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2,
+        }).setOrigin(0, 0).setDepth(101).setScrollFactor(0);
+
+        // XP bar background at bottom safe zone
+        const xpBotGrad = scene.add.graphics().setDepth(99).setScrollFactor(0);
+        xpBotGrad.fillStyle(0x000000, 0.45);
+        xpBotGrad.fillRect(0, XP_BAR_Y - XP_BAR_H - 20, GAME.WIDTH, XP_BAR_H + 50);
+
+        this.xpBarBg.fillStyle(0x333333, 0.8);
+        this.xpBarBg.fillRect(XP_BAR_X, XP_BAR_Y - XP_BAR_H / 2, XP_BAR_W, XP_BAR_H);
+        this.xpBarBg.lineStyle(1, 0xFF6600, 0.5);
+        this.xpBarBg.strokeRect(XP_BAR_X, XP_BAR_Y - XP_BAR_H / 2, XP_BAR_W, XP_BAR_H);
+
+        this.bossBarBg = null;
+        this.bossBarFill = null;
+        this.bossLabel = null;
     }
 
     _drawBarBg(gfx, x, y, borderColor) {
@@ -156,17 +179,22 @@ export class HUD {
                 onComplete: () => { this._shieldTween = null; }
             });
         }
-        this.shieldBarFill.clear();
-        if (this._shieldProxy.ratio > 0) {
-            this.shieldBarFill.fillStyle(0x4488ff, 1);
-            this.shieldBarFill.fillRoundedRect(
-                BAR_X + 1, SHIELD_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * this._shieldProxy.ratio, BAR_H - 2,
-                CORNER_R
-            );
+
+        const shieldRatioNow = this._shieldProxy.ratio;
+        if (shieldRatioNow !== this._lastShieldRatioDrawn) {
+            this._lastShieldRatioDrawn = shieldRatioNow;
+            this.shieldBarFill.clear();
+            if (shieldRatioNow > 0) {
+                this.shieldBarFill.fillStyle(0x4488ff, 1);
+                this.shieldBarFill.fillRoundedRect(
+                    BAR_X + 1, SHIELD_Y - BAR_H / 2 + 1,
+                    (BAR_W - 2) * shieldRatioNow, BAR_H - 2,
+                    CORNER_R
+                );
+            }
         }
 
-        // Shield recharge glow pulse
+        // Shield recharge glow pulse — intentionally NOT guarded (must animate every frame)
         const isRecharging = scene.shieldRecharging === true;
         this.shieldGlow.clear();
         if (isRecharging && shieldCur < shieldMax) {
@@ -196,19 +224,26 @@ export class HUD {
                 onComplete: () => { this._healthTween = null; }
             });
         }
-        this.healthBarFill.clear();
-        if (this._healthProxy.ratio > 0) {
-            const color = this._getHealthColor(this._healthProxy.ratio);
-            let alpha = 1;
-            if (hpCur <= 1 && hpMax > 1) {
-                alpha = 0.6 + 0.4 * Math.sin(scene.time.now * 0.008);
+
+        const healthRatioNow = this._healthProxy.ratio;
+        const lowHpPulsing = (hpCur <= 1 && hpMax > 1);
+        if (healthRatioNow !== this._lastHealthRatioDrawn || lowHpPulsing) {
+            if (!lowHpPulsing) {
+                this._lastHealthRatioDrawn = healthRatioNow;
             }
-            this.healthBarFill.fillStyle(color, alpha);
-            this.healthBarFill.fillRoundedRect(
-                BAR_X + 1, HEALTH_Y - BAR_H / 2 + 1,
-                (BAR_W - 2) * this._healthProxy.ratio, BAR_H - 2,
-                CORNER_R
-            );
+            this.healthBarFill.clear();
+            if (healthRatioNow > 0) {
+                const color = this._getHealthColor(healthRatioNow);
+                const alpha = lowHpPulsing
+                    ? 0.6 + 0.4 * Math.sin(scene.time.now * 0.008)
+                    : 1;
+                this.healthBarFill.fillStyle(color, alpha);
+                this.healthBarFill.fillRoundedRect(
+                    BAR_X + 1, HEALTH_Y - BAR_H / 2 + 1,
+                    (BAR_W - 2) * healthRatioNow, BAR_H - 2,
+                    CORNER_R
+                );
+            }
         }
     }
 
@@ -217,17 +252,14 @@ export class HUD {
     }
 
     showBossHP(current, max) {
-        const barW = 600;
-        const barH = 24;
-        const barX = (GAME.WIDTH - barW) / 2;
-        const barY = 110;
+        const barX = (GAME.WIDTH - BOSS_BAR_W) / 2;
 
         if (!this.bossBarBg) {
             this.bossBarBg = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
             this.bossBarFill = this.scene.add.graphics().setDepth(101).setScrollFactor(0);
-            this.bossLabel = this.scene.add.text(GAME.WIDTH / 2, barY - 18, 'BOSS', {
+            this.bossLabel = this.scene.add.text(GAME.WIDTH / 2, BOSS_BAR_Y - 22, 'BOSS', {
                 fontFamily: 'Arial',
-                fontSize: '22px',
+                fontSize: '26px',
                 color: '#ff4444',
                 fontStyle: 'bold',
                 stroke: '#000000',
@@ -237,28 +269,28 @@ export class HUD {
 
         this.bossBarBg.clear();
         this.bossBarBg.fillStyle(0x333333, 0.8);
-        this.bossBarBg.fillRect(barX, barY, barW, barH);
+        this.bossBarBg.fillRect(barX, BOSS_BAR_Y, BOSS_BAR_W, BOSS_BAR_H);
         this.bossBarBg.lineStyle(2, 0xff4444, 1);
-        this.bossBarBg.strokeRect(barX, barY, barW, barH);
+        this.bossBarBg.strokeRect(barX, BOSS_BAR_Y, BOSS_BAR_W, BOSS_BAR_H);
 
         this.bossBarFill.clear();
         const ratio = Math.max(0, current / max);
         const color = ratio > 0.5 ? 0xff4444 : ratio > 0.25 ? 0xff8800 : 0xffcc00;
         this.bossBarFill.fillStyle(color, 1);
-        this.bossBarFill.fillRect(barX + 2, barY + 2, (barW - 4) * ratio, barH - 4);
+        this.bossBarFill.fillRect(barX + 2, BOSS_BAR_Y + 2, (BOSS_BAR_W - 4) * ratio, BOSS_BAR_H - 4);
     }
 
     updateXPBar(current, threshold, level) {
-        const xpBarW = 400;
-        const xpBarH = 12;
-        const xpBarX = (GAME.WIDTH - xpBarW) / 2;
-        const xpBarY = 85;
-
+        // Uses module-level XP_BAR_W, XP_BAR_H, XP_BAR_X, XP_BAR_Y constants
         this.xpBarFill.clear();
         const ratio = Math.min(current / Math.max(threshold, 1), 1);
         this.xpBarFill.fillStyle(0xFF6600, 1);
-        this.xpBarFill.fillRect(xpBarX + 1, xpBarY - xpBarH / 2 + 1, (xpBarW - 2) * ratio, xpBarH - 2);
-
+        this.xpBarFill.fillRect(
+            XP_BAR_X + 1,
+            XP_BAR_Y - XP_BAR_H / 2 + 1,
+            (XP_BAR_W - 2) * ratio,
+            XP_BAR_H - 2
+        );
         this.xpLevelText.setText(`LV ${level}`);
     }
 
@@ -276,15 +308,15 @@ export class HUD {
             if (streak >= 20) {
                 this.streakText.setText(`x${streak} UNSTOPPABLE`);
                 this.streakText.setColor('#ff4444');
-                this.streakText.setFontSize(32);
+                this.streakText.setFontSize(40);
             } else if (streak >= 10) {
                 this.streakText.setText(`x${streak} ON FIRE`);
                 this.streakText.setColor('#ff8800');
-                this.streakText.setFontSize(30);
+                this.streakText.setFontSize(38);
             } else {
                 this.streakText.setText(`x${streak}`);
                 this.streakText.setColor('#ffffff');
-                this.streakText.setFontSize(28);
+                this.streakText.setFontSize(36);
             }
         }
     }
