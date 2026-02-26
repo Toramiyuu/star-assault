@@ -34,6 +34,15 @@ Plans:
 - [x] 01-01-PLAN.md — Switch XP orb colors to orange/gold (orb glow layers, magnet trail, XP bar, upgrade card accents)
 - [ ] 01-02-PLAN.md — Remove stat bar, migrate streak counter to HUD, add dirty-flag tween proxy to shield and HP bars
 
+### Phase 01.1: HUD Layout Rethink (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Depends on:** Phase 1
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 01.1 to break down)
+
 ### Phase 2: Ground Drop Icon System
 **Goal**: Players identify ground drop type at a glance from the icon silhouette alone — no reading required, no ambiguity between types
 **Depends on**: Phase 1

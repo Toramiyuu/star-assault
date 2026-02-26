@@ -53,9 +53,13 @@ Progress: [██░░░░░░░░] 25%
 - [Phase 01-02]: StatBar.js deleted — 8-stat strip confirmed anti-feature; players cannot read it mid-combat and it wastes bottom-screen real estate
 - [Phase 01-02]: Dirty-flag tween proxy pattern established: target HUD instance directly, stop active tween before retargeting — prevents animation debt on rapid damage events
 
+### Roadmap Evolution
+
+- Phase 1.1 inserted after Phase 1: HUD Layout Rethink — reposition/resize HUD based on Survivor.io best practices; current HUD too small (URGENT)
+
 ### Pending Todos
 
-None yet.
+- Fix crash when picking up MAG drop (GroundDropManager, area: gameplay)
 
 ### Blockers/Concerns
 
