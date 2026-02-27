@@ -12,16 +12,17 @@ export class ResultsScene extends Scene {
 
         const breakdown = data?.breakdown;
         const finalScore = breakdown?.finalScore ?? data?.score ?? 0;
+        const victory = data?.victory || false;
 
         const arena = new ArenaManager();
         if (breakdown) {
             arena.recordAttempt(breakdown);
         }
 
-        this.add.text(GAME.WIDTH / 2, 180, 'GAME OVER', {
+        this.add.text(GAME.WIDTH / 2, 180, victory ? 'VICTORY' : 'GAME OVER', {
             fontFamily: 'Arial',
             fontSize: '80px',
-            color: '#ff4444',
+            color: victory ? '#ffd700' : '#ff4444',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 5,

@@ -5,13 +5,13 @@ import {
   fireSpiralBurst,
   fireScreamBlast,
 } from "./AAXBossAttacks.js";
-
-const PHASE_NAMES = [
-  "PHASE 1: AAX AWAKENS",
-  "PHASE 2: STAY HUMBLE LOL",
-  "PHASE 3: AAX IS PISSED",
-  "PHASE 4: FULL SEND",
-];
+import { triggerHornModeTransition, defeatBoss } from "./AAXBossHornMode.js";
+import { buildHUD, redrawHUDFill } from "./AAXBossHUD.js";
+import {
+  updateAura,
+  updateLaserCollisions,
+  announcePhase,
+} from "./AAXBossEffects.js";
 
 const PHASE_FRAMES = [
   [3, 4, 5],
@@ -29,11 +29,12 @@ export class AAXBoss {
     this.active = false;
     this.sprite = null;
     this.aura = null;
-    this.horns = null;
     this.hp = 0;
     this.maxHP = 0;
     this.phase = 1;
     this.entryComplete = false;
+    this.hornModeActive = false;
+    this.cutsceneActive = false;
 
     this.animFrame = 0;
     this.animTimer = 0;
@@ -47,12 +48,26 @@ export class AAXBoss {
     this.activeLasers = [];
     this.spiralAngle = 0;
 
+    this.movementPauseCount = 0;
+    this.pauseTimeAccumulator = 0;
+    this.lastPauseStart = 0;
+
+    this.diveState = 'none';
+    this.diveTimer = 0;
+    this.lastDiveTime = -10000;
+    this.diveTargetX = 0;
+    this.diveStartX = GAME.WIDTH / 2;
+    this.diveStartY = 340;
+    this._returnStartY = 340;
+    this._returnStartX = GAME.WIDTH / 2;
+    this._diveBurstFired = false;
+
     this.hudBg = null;
     this.hudFill = null;
     this.hudLabel = null;
   }
 
-  spawn(hp) {
+  spawn(hp, instant) {
     this.active = true;
     this.hp = hp;
     this.maxHP = hp;
@@ -62,9 +77,9 @@ export class AAXBoss {
     const hasSheet = scene.textures.exists("boss-aax");
     const texKey = hasSheet ? "boss-aax" : "boss_01";
     const initFrame = hasSheet ? 3 : undefined;
-    this.sprite = scene.physics.add.image(
+    this.sprite = scene.add.image(
       GAME.WIDTH / 2,
-      -300,
+      instant ? 340 : -300,
       texKey,
       initFrame,
     );
@@ -77,108 +92,69 @@ export class AAXBoss {
       this.sprite.setScale(0.5);
     }
     this.sprite.setDepth(12);
-    this.sprite.body.setSize(
-      this.sprite.displayWidth * 0.7,
-      this.sprite.displayHeight * 0.7,
-    );
 
     this.aura = scene.add.graphics().setDepth(11);
-    this._buildHUD();
+    buildHUD(this);
 
-    scene.physics.add.overlap(
-      scene.playerBullets,
-      this.sprite,
-      null,
-      (bullet) => {
-        if (bullet.active && this.active) this.onBulletHit(bullet);
-        return false;
-      },
-      this,
-    );
-    scene.physics.add.overlap(
-      this.sprite,
-      scene.player,
-      null,
-      () => {
-        scene.damagePlayer();
-        return false;
-      },
-      this,
-    );
-
-    scene.tweens.add({
-      targets: this.sprite,
-      y: 250,
-      duration: 1500,
-      ease: "Bounce.easeOut",
-      onComplete: () => {
-        this.entryComplete = true;
-        this.announcePhase(1);
-      },
-    });
-  }
-
-  _buildHUD() {
-    const barW = 900,
-      barH = 28;
-    const barX = (GAME.WIDTH - barW) / 2,
-      barY = 90;
-    this.hudBg = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
-    this.hudFill = this.scene.add.graphics().setDepth(101).setScrollFactor(0);
-    this.hudLabel = this.scene.add
-      .text(GAME.WIDTH / 2, barY - 6, "AAX \u2014 THE FINAL BOSS", {
-        fontFamily: "Arial",
-        fontSize: "22px",
-        color: "#ff4444",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(102)
-      .setScrollFactor(0);
-    this.hudBg.fillStyle(0x330000, 0.9);
-    this.hudBg.fillRect(barX, barY, barW, barH);
-    this.hudBg.lineStyle(2, 0xff4444, 1);
-    this.hudBg.strokeRect(barX, barY, barW, barH);
-    this._redrawHUDFill();
+    if (instant) {
+      this.entryComplete = true;
+      this.announcePhase(1);
+      scene.audio.playBossLaughEntry();
+    } else {
+      scene.tweens.add({
+        targets: this.sprite,
+        y: 340,
+        duration: 1500,
+        ease: "Bounce.easeOut",
+        onComplete: () => {
+          this.entryComplete = true;
+          this.announcePhase(1);
+          scene.audio.playBossLaughEntry();
+        },
+      });
+    }
   }
 
   _redrawHUDFill() {
-    if (!this.hudFill) return;
-    const barW = 900,
-      barH = 28;
-    const barX = (GAME.WIDTH - barW) / 2,
-      barY = 90;
-    const ratio = Math.max(0, this.hp / this.maxHP);
-    const color =
-      ratio > 0.75
-        ? 0x00cc44
-        : ratio > 0.5
-          ? 0xcccc00
-          : ratio > 0.25
-            ? 0xff8800
-            : 0xff2200;
-    this.hudFill.clear();
-    this.hudFill.fillStyle(color, 1);
-    this.hudFill.fillRect(barX + 2, barY + 2, (barW - 4) * ratio, barH - 4);
+    redrawHUDFill(this);
+  }
+
+  announcePhase(n) {
+    announcePhase(this, n);
   }
 
   update(time, delta) {
-    if (!this.active || !this.sprite?.active) return;
+    if (!this.active || !this.sprite?.active) {
+      if (this._wasActive !== false) {
+        console.warn(
+          "[BOSS] update stopped — active:",
+          this.active,
+          "sprite:",
+          this.sprite?.active,
+        );
+        this._wasActive = false;
+      }
+      return;
+    }
+    this._wasActive = true;
     this._updateAnimation(delta);
     this._updateMovement(time);
-    this._updateAura(time);
-    this._updateHorns();
-    this._updateLaserCollisions();
-    if (!this.entryComplete) return;
+    updateAura(this, time);
+    updateLaserCollisions(this);
+    this._checkBulletHits();
+    this._checkPlayerCollision();
+    if (!this.entryComplete || this.cutsceneActive) return;
+    this._updateDive(time, delta);
 
     const spd = this.phase >= 4 ? 1.4 : 1.0;
 
-    if (time - this.lastLaserTime > (this.phase >= 2 ? 2000 : 2500) / spd) {
+    if (this.diveState !== 'none') return;
+
+    const laserInterval = this.phase >= 3 ? 2500 : this.phase >= 2 ? 3000 : 3500;
+    if (time - this.lastLaserTime > laserInterval / spd) {
       this.lastLaserTime = time;
       fireLasers(this);
-      if (this.phase >= 3)
+      if (this.phase >= 4)
         this.scene.time.delayedCall(280, () => {
           if (this.active) fireLasers(this);
         });
@@ -186,11 +162,11 @@ export class AAXBoss {
 
     if (
       this.phase >= 2 &&
-      time - this.lastMouthTime > (this.phase >= 3 ? 1500 : 2000) / spd
+      time - this.lastMouthTime > (this.phase >= 3 ? 2000 : 2800) / spd
     ) {
       this.lastMouthTime = time;
       fireMouthSpread(this);
-      if (this.phase >= 3) {
+      if (this.phase >= 4) {
         this.scene.time.delayedCall(400, () => {
           if (this.active) fireMouthSpread(this);
         });
@@ -200,7 +176,7 @@ export class AAXBoss {
       }
     }
 
-    if (this.phase >= 3 && time - this.lastSpiralTime > 800 / spd) {
+    if (this.phase >= 3 && time - this.lastSpiralTime > 1500 / spd) {
       this.lastSpiralTime = time;
       fireSpiralBurst(this);
     }
@@ -212,6 +188,7 @@ export class AAXBoss {
   }
 
   _updateAnimation(delta) {
+    if (this.cutsceneActive) return;
     if (this.painTimer > 0) {
       this.painTimer -= delta;
       if (this.painTimer <= 0) {
@@ -221,86 +198,178 @@ export class AAXBoss {
       return;
     }
     this.animTimer += delta;
-    const fps = this.phase >= 4 ? 16 : 8;
+    const fps = this.hornModeActive ? 6 : 8;
     if (this.animTimer > 1000 / fps) {
       this.animTimer = 0;
-      const frames = PHASE_FRAMES[this.phase - 1];
-      this.animFrame = (this.animFrame + 1) % frames.length;
-      if (this.sprite?.active && this.scene.textures.exists("boss-aax")) {
-        this.sprite.setFrame(frames[this.animFrame]);
+      if (this.hornModeActive) {
+        this.animFrame = (this.animFrame + 1) % 9;
+        if (this.sprite?.active) this.sprite.setFrame(this.animFrame);
+      } else {
+        const frames = PHASE_FRAMES[this.phase - 1];
+        this.animFrame = (this.animFrame + 1) % frames.length;
+        if (this.sprite?.active && this.scene.textures.exists("boss-aax")) {
+          this.sprite.setFrame(frames[this.animFrame]);
+        }
       }
+    }
+  }
+
+  pauseMovement() {
+    if (this.movementPauseCount === 0) {
+      this.lastPauseStart = this.scene.time.now;
+    }
+    this.movementPauseCount++;
+  }
+
+  resumeMovement() {
+    this.movementPauseCount = Math.max(0, this.movementPauseCount - 1);
+    if (this.movementPauseCount === 0 && this.lastPauseStart > 0) {
+      this.pauseTimeAccumulator += this.scene.time.now - this.lastPauseStart;
+      this.lastPauseStart = 0;
     }
   }
 
   _updateMovement(time) {
-    if (!this.entryComplete || !this.sprite?.active) return;
-    const amplitude = this.phase >= 4 ? 360 : 180;
+    if (!this.entryComplete || !this.sprite?.active || this.cutsceneActive)
+      return;
+    if (this.movementPauseCount > 0 || this.diveState !== 'none') return;
+    const effectiveTime = time - this.pauseTimeAccumulator;
+    const amplitude = this.phase >= 4 ? 400 : this.phase >= 3 ? 350 : 250;
+    const speed = this.phase >= 4 ? 1800 : this.phase >= 3 ? 2200 : 2800;
     const newX =
-      GAME.WIDTH / 2 + Math.sin((time / 3000) * Math.PI * 2) * amplitude;
-    this.sprite.body.reset(newX, 250);
+      GAME.WIDTH / 2 + Math.sin((effectiveTime / speed) * Math.PI * 2) * amplitude;
+    const bobY = 340 + Math.sin((effectiveTime / 1500) * Math.PI * 2) * 30;
+    this.sprite.setPosition(newX, bobY);
   }
 
-  _updateAura(time) {
-    if (!this.aura || !this.sprite?.active) return;
-    const colors = [0x0044ff, 0x00ffaa, 0xff8800, 0xff0000];
-    const color =
-      this.phase >= 4 && Math.floor(time / 150) % 2 === 0
-        ? 0xff6600
-        : colors[this.phase - 1];
-    this.aura.clear();
-    this.aura.fillStyle(color, 0.25);
-    this.aura.fillCircle(
-      this.sprite.x,
-      this.sprite.y,
-      this.sprite.displayWidth * 0.65,
-    );
-    this.aura.fillStyle(color, 0.12);
-    this.aura.fillCircle(
-      this.sprite.x,
-      this.sprite.y,
-      this.sprite.displayWidth * 0.85,
-    );
-  }
-
-  _updateHorns() {
-    if (this.phase < 4) {
-      if (this.horns) this.horns.setVisible(false);
+  _updateDive(time, delta) {
+    if (this.diveState === 'none') {
+      if (this.phase < 2 || this.cutsceneActive) return;
+      const interval = this.phase >= 4 ? 5000 : this.phase >= 3 ? 6000 : 8000;
+      if (time - this.lastDiveTime > interval) {
+        this.diveState = 'warning';
+        this.diveTimer = 0;
+        this.pauseMovement();
+        if (this.sprite?.active) {
+          this.diveStartX = this.sprite.x;
+          this.diveStartY = this.sprite.y;
+        }
+      }
       return;
     }
-    if (!this.horns) this.horns = this.scene.add.graphics().setDepth(13);
-    const cx = this.sprite.x;
-    const topY = this.sprite.y - this.sprite.displayHeight * 0.5 - 10;
-    this.horns.setVisible(true).clear().fillStyle(0xcc0000, 1);
-    this.horns.fillTriangle(cx - 50, topY - 60, cx - 90, topY, cx - 20, topY);
-    this.horns.fillTriangle(cx + 50, topY - 60, cx + 20, topY, cx + 90, topY);
-  }
 
-  _updateLaserCollisions() {
-    this.activeLasers = this.activeLasers.filter((l) => !l.done);
-    const player = this.scene.player;
-    if (!player?.active || this.scene.isInvulnerable) return;
-    const px = player.x,
-      py = player.y,
-      pw = 35;
-    for (const laser of this.activeLasers) {
-      const hitL =
-        Math.abs(px - laser.eyeL.x) < pw &&
-        py >= laser.eyeL.y &&
-        py <= laser.eyeL.y + laser.length;
-      const hitR =
-        Math.abs(px - laser.eyeR.x) < pw &&
-        py >= laser.eyeR.y &&
-        py <= laser.eyeR.y + laser.length;
-      if (hitL || hitR) {
-        this.scene.damagePlayer();
-        return;
+    this.diveTimer += delta;
+
+    switch (this.diveState) {
+      case 'warning':
+        if (this.sprite?.active) {
+          const shakeX = (this.random() - 0.5) * 6;
+          const shakeY = (this.random() - 0.5) * 6;
+          this.sprite.setPosition(this.diveStartX + shakeX, this.diveStartY + shakeY);
+          if (Math.floor(this.diveTimer / 100) % 2 === 0) {
+            this.sprite.setTint(0xff8800);
+          } else {
+            this.sprite.clearTint();
+          }
+        }
+        if (this.diveTimer >= 500) {
+          this.diveTimer = 0;
+          this.diveState = 'tracking';
+          if (this.sprite?.active) this.sprite.clearTint();
+          const player = this.scene.player;
+          this.diveTargetX = player?.active ? player.x : GAME.WIDTH / 2;
+        }
+        break;
+
+      case 'tracking':
+        if (this.sprite?.active) {
+          const player = this.scene.player;
+          if (player?.active) this.diveTargetX = player.x;
+          const currentX = this.sprite.x;
+          this.sprite.setPosition(currentX + (this.diveTargetX - currentX) * 0.03, this.diveStartY);
+        }
+        if (this.diveTimer >= 1000) {
+          this.diveTimer = 0;
+          this.diveState = 'diving';
+          this._diveBurstFired = false;
+          if (this.sprite?.active) this.diveStartX = this.sprite.x;
+        }
+        break;
+
+      case 'diving': {
+        const diveProgress = Math.min(this.diveTimer / 1500, 1);
+        const eased = diveProgress * diveProgress;
+        const targetY = GAME.HEIGHT * 0.75;
+        if (this.sprite?.active) {
+          const player = this.scene.player;
+          if (player?.active) {
+            this.sprite.x += (player.x - this.sprite.x) * 0.01;
+          }
+          this.sprite.y = this.diveStartY + (targetY - this.diveStartY) * eased;
+        }
+        if (diveProgress >= 0.95 && !this._diveBurstFired) {
+          this._diveBurstFired = true;
+          this._fireDiveBurst();
+        }
+        if (this.diveTimer >= 1500) {
+          this.diveTimer = 0;
+          this.diveState = 'returning';
+          if (this.sprite?.active) {
+            this._returnStartY = this.sprite.y;
+            this._returnStartX = this.sprite.x;
+          }
+        }
+        break;
+      }
+
+      case 'returning': {
+        const returnProgress = Math.min(this.diveTimer / 1500, 1);
+        const eased = 1 - (1 - returnProgress) * (1 - returnProgress);
+        if (this.sprite?.active) {
+          this.sprite.y = this._returnStartY + (340 - this._returnStartY) * eased;
+          this.sprite.x = this._returnStartX + (GAME.WIDTH / 2 - this._returnStartX) * eased;
+        }
+        if (this.diveTimer >= 1500) {
+          this.diveState = 'none';
+          this.diveTimer = 0;
+          this.lastDiveTime = time;
+          this.resumeMovement();
+        }
+        break;
       }
     }
   }
 
+  _fireDiveBurst() {
+    if (!this.sprite?.active) return;
+    const cx = this.sprite.x;
+    const cy = this.sprite.y;
+    const speed = 280;
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.PI / 2 + ((i - 4.5) / 10) * (Math.PI * 0.6);
+      const b = this.scene.enemyBullets.get(cx, cy);
+      if (!b) continue;
+      b.setActive(true).setVisible(true).setScale(0.35).setTintFill(0xff6600);
+      b.body.enable = true;
+      b.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+      b.body.setSize(b.width * 0.5, b.height * 0.5);
+      b.update = function () {
+        if (this.y > GAME.HEIGHT + 60 || this.y < -60 || this.x < -60 || this.x > GAME.WIDTH + 60) {
+          this.setActive(false).setVisible(false);
+          this.body.enable = false;
+        }
+      };
+    }
+  }
+
   _checkPhase() {
+    if (this.cutsceneActive || this.hornModeActive) return;
     const ratio = this.hp / this.maxHP;
-    const newPhase = ratio > 0.75 ? 1 : ratio > 0.5 ? 2 : ratio > 0.25 ? 3 : 4;
+    if (ratio <= 0.25) {
+      triggerHornModeTransition(this);
+      return;
+    }
+    const newPhase = ratio > 0.75 ? 1 : ratio > 0.5 ? 2 : 3;
     if (newPhase > this.phase) {
       this.phase = newPhase;
       this.animFrame = 0;
@@ -309,44 +378,58 @@ export class AAXBoss {
     }
   }
 
-  announcePhase(n) {
-    const t = this.scene.add
-      .text(GAME.WIDTH / 2, GAME.HEIGHT / 2 - 80, PHASE_NAMES[n - 1], {
-        fontFamily: "Arial",
-        fontSize: "60px",
-        color: "#ff4444",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 7,
-      })
-      .setOrigin(0.5)
-      .setDepth(200)
-      .setScale(0);
-    this.scene.tweens.add({
-      targets: t,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 400,
-      ease: "Back.easeOut",
-      onComplete: () => {
-        this.scene.time.delayedCall(1200, () => {
-          this.scene.tweens.add({
-            targets: t,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => t.destroy(),
-          });
-        });
-      },
+  _checkBulletHits() {
+    if (!this.sprite?.active || this.cutsceneActive) return;
+    const sx = this.sprite.x;
+    const sy = this.sprite.y;
+    const hw = this.sprite.displayWidth * 0.35;
+    const hh = this.sprite.displayHeight * 0.35;
+    this.scene.playerBullets.getChildren().forEach((b) => {
+      if (!b.active) return;
+      if (b.x > sx - hw && b.x < sx + hw && b.y > sy - hh && b.y < sy + hh) {
+        this.onBulletHit(b);
+      }
     });
+    if (this.scene.weaponManager?.weaponBullets) {
+      this.scene.weaponManager.weaponBullets.getChildren().forEach((b) => {
+        if (!b.active) return;
+        if (b.x > sx - hw && b.x < sx + hw && b.y > sy - hh && b.y < sy + hh) {
+          this.onBulletHit(b);
+        }
+      });
+    }
+  }
+
+  _checkPlayerCollision() {
+    if (!this.sprite?.active || this.cutsceneActive) return;
+    const player = this.scene.player;
+    if (!player?.active || this.scene.godMode || this.scene.isInvulnerable)
+      return;
+    const dx = Math.abs(player.x - this.sprite.x);
+    const dy = Math.abs(player.y - this.sprite.y);
+    const hw = this.sprite.displayWidth * 0.35;
+    const hh = this.sprite.displayHeight * 0.35;
+    if (dx < hw + 20 && dy < hh + 20) {
+      this.scene.damagePlayer();
+    }
   }
 
   onBulletHit(bullet) {
     if (!this.active) return;
     bullet.setActive(false).setVisible(false);
     bullet.body.enable = false;
+    const pierce = bullet.getData('pierce') || 0;
+    const pierceCount = bullet.getData('pierceCount') || 0;
+    if (pierceCount < pierce) {
+      bullet.setData('pierceCount', pierceCount + 1);
+      bullet.setActive(true).setVisible(true);
+      bullet.body.enable = true;
+    }
     this.scene.scoreManager.shotsHit++;
-    this.hp--;
+    const damage = bullet.getData('damage') || this.scene.playerDamage || 1;
+    const isCrit = bullet.getData('isCrit') || false;
+    this.hp -= damage;
+    if (this.hp % 50 === 0) console.log("[BOSS] HP:", this.hp, "/", this.maxHP);
     this.sprite.setTint(0xff0000);
     this.painTimer = 700;
     this.painTint = true;
@@ -354,118 +437,19 @@ export class AAXBoss {
       this.painTint = false;
       if (this.sprite?.active) {
         this.sprite.clearTint();
-        if (this.scene.textures.exists("boss-aax"))
+        if (!this.hornModeActive && this.scene.textures.exists("boss-aax"))
           this.sprite.setFrame(PAIN_FRAME);
       }
     });
+    if (isCrit) {
+      this.scene.showFloatingText(this.sprite.x, this.sprite.y - 80, 'CRIT!', '#ffcc00');
+    }
     this._checkPhase();
-    this._redrawHUDFill();
+    redrawHUDFill(this);
     if (this.hp <= 0) this.defeat();
   }
 
   defeat() {
-    this.active = false;
-    const pts = this.scene.scoreManager.addBossKill(
-      this.scene.waveManager.currentWave,
-    );
-    this.scene.score = this.scene.scoreManager.score;
-    this.scene.cameras.main.shake(600, 0.025);
-    this.scene.audio.playBossExplosion();
-    [this.hudBg, this.hudFill, this.hudLabel].forEach((o) => o?.destroy());
-    this.hudBg = this.hudFill = this.hudLabel = null;
-
-    this.scene.showFloatingText(
-      this.sprite.x,
-      this.sprite.y - 100,
-      `+${pts}`,
-      "#ffcc00",
-    );
-
-    const defeatText = this.scene.add
-      .text(GAME.WIDTH / 2, GAME.HEIGHT / 2, "AAX HAS BEEN\nDEFEATED", {
-        fontFamily: "Arial",
-        fontSize: "80px",
-        color: "#ffcc00",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 8,
-        align: "center",
-      })
-      .setOrigin(0.5)
-      .setDepth(300)
-      .setScale(0.1);
-    this.scene.tweens.add({
-      targets: defeatText,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 500,
-      ease: "Back.easeOut",
-    });
-
-    let cycleIdx = 0;
-    const allFrames = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-    this.scene.time.addEvent({
-      delay: 50,
-      repeat: 39,
-      callback: () => {
-        if (this.sprite?.active && this.scene.textures.exists("boss-aax")) {
-          this.sprite.setFrame(allFrames[cycleIdx % allFrames.length]);
-        }
-        cycleIdx++;
-      },
-    });
-    this.scene.tweens.add({
-      targets: this.sprite,
-      scaleX: this.sprite.scaleX * 2,
-      scaleY: this.sprite.scaleY * 2,
-      duration: 700,
-    });
-
-    this.scene.time.addEvent({
-      delay: 150,
-      repeat: 8,
-      callback: () => {
-        if (!this.sprite) return;
-        const ox = (this.random() - 0.5) * 180;
-        const oy = (this.random() - 0.5) * 180;
-        this.scene.explosions.play(
-          this.sprite.x + ox,
-          this.sprite.y + oy,
-          "enemy_explosion",
-          9,
-          0.2,
-        );
-      },
-    });
-
-    this.scene.time.delayedCall(2000, () => {
-      if (this.sprite) {
-        this.scene.explosions.play(
-          this.sprite.x,
-          this.sprite.y,
-          "player_explosion",
-          7,
-          0.4,
-        );
-        this.sprite.destroy();
-        this.sprite = null;
-      }
-      if (this.aura) {
-        this.aura.destroy();
-        this.aura = null;
-      }
-      if (this.horns) {
-        this.horns.destroy();
-        this.horns = null;
-      }
-      for (const l of this.activeLasers) {
-        if (l.graphics?.active !== false) l.graphics?.destroy();
-      }
-      this.activeLasers = [];
-      this.scene.time.delayedCall(1500, () => {
-        defeatText.destroy();
-        this.bossManager.onAAXBossDefeated();
-      });
-    });
+    defeatBoss(this);
   }
 }

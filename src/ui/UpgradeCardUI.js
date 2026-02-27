@@ -1,12 +1,18 @@
 import { GAME } from '../config/constants.js';
-import { RARITY_COLORS } from '../config/upgrades.js';
 
-const CARD_W = 920;
-const CARD_H = 270;
-const CARD_GAP = 20;
-const OVERLAY_ALPHA = 0.72;
+const CARD_W   = 940;
+const CARD_H   = 400;   // taller — fits bigger text comfortably
+const CARD_GAP = 16;
+const OVERLAY_ALPHA = 0.88;
 
-// Rarity → hex for Phaser Graphics
+// Icon layout
+const ICON_CX    = -CARD_W / 2 + 126;   // -344
+const ICON_R     = 112;                   // bigger icon to match taller card
+const CONTENT_X  = ICON_CX + ICON_R + 28; // -204
+const CONTENT_RX = CARD_W / 2 - 28;       // +442
+const CONTENT_W  = CONTENT_RX - CONTENT_X; // 646
+
+// Rarity colour palette
 const RARITY_HEX = {
   GREY:   0x9E9E9E,
   GREEN:  0x4CAF50,
@@ -16,307 +22,304 @@ const RARITY_HEX = {
   GOLD:   0xFFC107,
 };
 
-const TYPE_COLORS = {
-  weapon:  0xff4444,
-  passive: 0x4488ff,
-  defense: 0x44ffff,
-  utility: 0x88ff44,
-  cosmic:  0xffc107,
-  heal:    0xff4444,
+// Lighter CSS text versions (legible on dark bg)
+const RARITY_CSS = {
+  GREY:   '#BDBDBD',
+  GREEN:  '#81C784',
+  BLUE:   '#64B5F6',
+  PURPLE: '#CE93D8',
+  RED:    '#EF9A9A',
+  GOLD:   '#FFE082',
 };
 
-const TYPE_LETTERS = {
-  weapon:  'W',
-  passive: 'P',
-  defense: 'D',
-  utility: 'U',
-  cosmic:  'C',
-  heal:    'H',
+// Stat value — vivid per-rarity colour so the number POPS
+const STAT_CSS = {
+  GREY:   '#E0E0E0',
+  GREEN:  '#69F0AE',
+  BLUE:   '#40C4FF',
+  PURPLE: '#EA80FC',
+  RED:    '#FF6E6E',
+  GOLD:   '#FFD740',
 };
+
+const TYPE_COLORS  = { weapon: 0xff4444, passive: 0x4488ff, defense: 0x44ffff, utility: 0x88ff44, cosmic: 0xffc107, heal: 0xff4444 };
+const TYPE_LETTERS = { weapon: 'W', passive: 'P', defense: 'D', utility: 'U', cosmic: 'C', heal: 'H' };
+
+// Height of the solid rarity band at the top of each card
+const BAND_H = 54;
 
 export class UpgradeCardUI {
   constructor(scene, upgradeManager) {
-    this.scene = scene;
+    this.scene          = scene;
     this.upgradeManager = upgradeManager;
-    this.overlay = null;
-    this.headerText = null;
-    this.cards = [];
-    this.active = false;
+    this.overlay        = null;
+    this.headerText     = null;
+    this.cards          = [];
+    this.active         = false;
   }
 
   show(cardData) {
     this.active = true;
 
-    // Dark overlay — full screen, fades in
     this.overlay = this.scene.add.graphics().setDepth(300);
     this.overlay.fillStyle(0x000000, OVERLAY_ALPHA);
     this.overlay.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
     this.overlay.setAlpha(0);
-    this.scene.tweens.add({ targets: this.overlay, alpha: 1, duration: 180 });
+    this.scene.tweens.add({ targets: this.overlay, alpha: 1, duration: 200 });
 
     const totalStackH = cardData.length * CARD_H + (cardData.length - 1) * CARD_GAP;
-    const headerGap = 28;
-    const headerSize = 44;
-    const blockH = headerSize + headerGap + totalStackH;
-    const blockTopY = (GAME.HEIGHT - blockH) / 2;
+    const headerGap   = 28;
+    const headerSize  = 56;
+    const blockH      = headerSize + headerGap + totalStackH;
+    const blockTopY   = (GAME.HEIGHT - blockH) / 2;
 
     this.headerText = this.scene.add.text(
       GAME.WIDTH / 2,
       blockTopY + headerSize / 2,
       'CHOOSE AN UPGRADE',
-      { fontFamily: 'Arial', fontSize: '44px', color: '#FFD700', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 3 }
+      { fontFamily: 'Arial Black, Arial', fontSize: '56px', color: '#FFD700',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }
     ).setOrigin(0.5).setDepth(350).setAlpha(0);
-
-    this.scene.tweens.add({ targets: this.headerText, alpha: 1, duration: 180 });
+    this.scene.tweens.add({ targets: this.headerText, alpha: 1, duration: 200 });
 
     const firstCardY = blockTopY + headerSize + headerGap + CARD_H / 2;
-    const centerX = GAME.WIDTH / 2;
-
     this.cards = [];
     cardData.forEach((data, i) => {
-      const y = firstCardY + i * (CARD_H + CARD_GAP);
-      const card = this._createCard(centerX, y, data, i);
+      const card = this._createCard(GAME.WIDTH / 2, firstCardY + i * (CARD_H + CARD_GAP), data, i);
       this.cards.push(card);
     });
   }
 
   _createCard(x, y, data, index) {
-    const scene = this.scene;
-    const isHeal = data.isHeal === true;
+    const scene    = this.scene;
+    const isHeal   = data.isHeal === true;
+    const upgrade  = data.upgrade;
+    const curLevel = data.currentLevel;
+    const isLvlUp  = data.isLevelUp;
+    const rarity   = isHeal ? 'GREY' : upgrade.rarity;
+    const type     = isHeal ? 'heal' : upgrade.type;
 
-    const upgrade     = data.upgrade;
-    const currentLevel = data.currentLevel;
-    const isLevelUp   = data.isLevelUp;
-    const rarity      = isHeal ? 'GREY' : upgrade.rarity;
-    const type        = isHeal ? 'heal' : upgrade.type;
-
-    const rarityHex   = RARITY_HEX[rarity] || 0x9e9e9e;
-    const circleColor = isHeal ? TYPE_COLORS.heal : (TYPE_COLORS[type] || 0xaaaaaa);
+    const rarityHex    = RARITY_HEX[rarity]  || 0x9e9e9e;
+    const rarityCSS    = RARITY_CSS[rarity]   || '#BDBDBD';
+    const statCSS      = STAT_CSS[rarity]     || '#FFFFFF';
+    const circleColor  = isHeal ? TYPE_COLORS.heal : (TYPE_COLORS[type] || 0xaaaaaa);
     const circleLetter = isHeal ? 'H' : (TYPE_LETTERS[type] || '?');
 
-    const cardName = isHeal ? 'EMERGENCY REPAIR' : upgrade.name;
-    const nextLevel = currentLevel + 1;
+    const cardName  = isHeal ? 'EMERGENCY REPAIR' : upgrade.name;
+    const nextLevel = curLevel + 1;
     const levelData = isHeal ? null : upgrade.levels[nextLevel - 1];
-    const cardStat  = isHeal ? 'Restore 1 HP' : (levelData?.label || '');
-    const cardDesc  = isHeal ? 'Quick patch job' : upgrade.description;
-    const maxLevel  = isHeal ? 1 : upgrade.maxLevel;
+    const cardStat  = isHeal ? '+1 HP' : (levelData?.label || '');
+    const cardDesc  = isHeal
+      ? 'Emergency hull repair — restores one health segment.'
+      : upgrade.description;
+    const maxLevel = isHeal ? 1 : upgrade.maxLevel;
 
-    // Container starts off-screen right, slides in
     const container = scene.add.container(GAME.WIDTH + CARD_W, y).setDepth(350);
 
-    // ── Background ────────────────────────────────────────────────────
+    // ── Background ─────────────────────────────────────────────────
     const bg = scene.add.graphics();
     this._drawCardBg(bg, rarityHex, false);
     container.add(bg);
 
-    // ── Rarity badge — top right ──────────────────────────────────────
-    const badgeW = 100, badgeH = 24;
-    const badgeX = CARD_W / 2 - badgeW / 2 - 12;
-    const badgeY = -CARD_H / 2 + badgeH / 2 + 8;
+    // ── Icon zone ──────────────────────────────────────────────────
+    const iconYOffset = BAND_H / 2 + 8; // shift icon down so it centres in the content area below band
+    const iconBg = scene.add.graphics();
+    iconBg.fillStyle(0x010108, 0.95);
+    iconBg.fillCircle(ICON_CX, iconYOffset, ICON_R);
+    container.add(iconBg);
 
-    const badgeGfx = scene.add.graphics();
-    badgeGfx.fillStyle(rarityHex, 0.85);
-    badgeGfx.fillRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
-    badgeGfx.lineStyle(1, 0xffffff, 0.4);
-    badgeGfx.strokeRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
-    container.add(badgeGfx);
-
-    const rarityLabel = scene.add.text(badgeX, badgeY, rarity, {
-      fontFamily: 'Arial', fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    container.add(rarityLabel);
-
-    // ── Left zone: upgrade icon (180px wide, centered at x = -CARD_W/2 + 9 + 90 = -CARD_W/2 + 99) ──
-    const iconCX = -CARD_W / 2 + 105;
-    const iconRadius = 82;
-
-    // Icon backing ring
-    const iconGfx = scene.add.graphics();
-    iconGfx.fillStyle(0x000000, 0.5);
-    iconGfx.fillCircle(iconCX, 0, iconRadius);
-    iconGfx.lineStyle(2, rarityHex, 0.6);
-    iconGfx.strokeCircle(iconCX, 0, iconRadius);
-    container.add(iconGfx);
-
-    // Use loaded texture if available, else fallback to letter circle
-    const upgradeId = isHeal ? null : upgrade.id;
-    const texKey = upgradeId ? `upgrade_${upgradeId}` : null;
-    const hasTexture = texKey &&
-      scene.textures.exists(texKey) &&
-      scene.textures.get(texKey).source[0]?.width > 4;
+    const upgradeId  = isHeal ? null : upgrade.id;
+    const texKey     = upgradeId ? `upgrade_${upgradeId}` : null;
+    const hasTexture = texKey && scene.textures.exists(texKey) && scene.textures.get(texKey).source[0]?.width > 4;
 
     if (hasTexture) {
-      const iconImg = scene.add.image(iconCX, 0, texKey);
-      iconImg.setDisplaySize(iconRadius * 1.8, iconRadius * 1.8);
+      const iconImg = scene.add.image(ICON_CX, iconYOffset, texKey);
+      iconImg.setDisplaySize(ICON_R * 2, ICON_R * 2);
       container.add(iconImg);
     } else {
-      // Fallback: colored circle with type letter
-      const fallbackGfx = scene.add.graphics();
-      fallbackGfx.fillStyle(circleColor, 0.9);
-      fallbackGfx.fillCircle(iconCX, 0, iconRadius - 4);
-      container.add(fallbackGfx);
-
-      const letterText = scene.add.text(iconCX, 0, circleLetter, {
-        fontFamily: 'Arial', fontSize: '60px', color: '#ffffff', fontStyle: 'bold',
-      }).setOrigin(0.5);
-      container.add(letterText);
+      const fg = scene.add.graphics();
+      fg.fillStyle(circleColor, 0.90);
+      fg.fillCircle(ICON_CX, iconYOffset, ICON_R - 8);
+      container.add(fg);
+      const lt = scene.add.text(ICON_CX, iconYOffset, circleLetter,
+        { fontFamily: 'Arial', fontSize: '78px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+      container.add(lt);
     }
 
-    // ── Content zone (starts after icon zone) ────────────────────────
-    const contentX = -CARD_W / 2 + 205; // left edge of content
-    const contentW = 590; // stops before right-side rarity badge
+    // Rarity ring over icon
+    const ring = scene.add.graphics();
+    ring.lineStyle(4, rarityHex, 0.95);
+    ring.strokeCircle(ICON_CX, iconYOffset, ICON_R);
+    // Outer glow ring
+    ring.lineStyle(8, rarityHex, 0.20);
+    ring.strokeCircle(ICON_CX, iconYOffset, ICON_R + 6);
+    container.add(ring);
 
-    // Upgrade name
-    const nameText = scene.add.text(contentX, -CARD_H / 2 + 30, cardName, {
-      fontFamily: 'Arial', fontSize: '30px', color: '#FFFFFF', fontStyle: 'bold',
-      wordWrap: { width: contentW },
-    }).setOrigin(0, 0.5);
+    // ── Content zone ───────────────────────────────────────────────
+    // Vertical positions relative to card centre (top = -CARD_H/2 = -200)
+    const bandBottom = -CARD_H / 2 + BAND_H;        // -146
+    const contentTop = bandBottom + 16;              // -130
+
+    // Name
+    const nameText = scene.add.text(CONTENT_X, contentTop, cardName, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize:   '38px',
+      color:      '#FFFFFF',
+      fontStyle:  'bold',
+      wordWrap:   { width: CONTENT_W - 80 },
+    }).setOrigin(0, 0);
     container.add(nameText);
 
-    // Stat label (amber, prominent)
-    const statText = scene.add.text(contentX, -CARD_H / 2 + 30 + 42, cardStat, {
-      fontFamily: 'Arial', fontSize: '25px', color: '#FFAA00', fontStyle: 'bold',
-    }).setOrigin(0, 0.5);
-    container.add(statText);
+    // Rarity label — right-aligned in band
+    const rarityLabel = scene.add.text(CONTENT_RX, -CARD_H / 2 + BAND_H / 2, rarity, {
+      fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#000000', fontStyle: 'bold',
+    }).setOrigin(1, 0.5);
+    container.add(rarityLabel);
 
-    // Level dots or NEW badge
-    let levelStr = '';
-    if (!isHeal) {
-      if (isLevelUp) {
-        for (let i = 1; i <= maxLevel; i++) {
-          levelStr += i <= currentLevel ? '\u25CF ' : '\u25CB ';
-        }
-        levelStr = levelStr.trim();
-      } else {
-        levelStr = 'NEW';
-      }
+    // Stat — THE HERO: huge, vivid rarity colour
+    const statY = contentTop + 56;
+    if (cardStat) {
+      const statText = scene.add.text(CONTENT_X, statY, cardStat, {
+        fontFamily: 'Arial Black, Arial',
+        fontSize:   '50px',
+        color:      statCSS,
+        fontStyle:  'bold',
+        stroke:     '#000000',
+        strokeThickness: 4,
+        wordWrap:   { width: CONTENT_W },
+      }).setOrigin(0, 0);
+      container.add(statText);
     }
-    if (levelStr) {
-      const levelText = scene.add.text(contentX, -CARD_H / 2 + 30 + 84, levelStr, {
-        fontFamily: 'Arial',
-        fontSize: isLevelUp ? '20px' : '18px',
-        color:     isLevelUp ? '#FFCC00' : '#FF8800',
-        fontStyle: 'bold',
-      }).setOrigin(0, 0.5);
+
+    // Level / NEW
+    const levelY = statY + 68;
+    if (!isHeal) {
+      const levelStr = isLvlUp
+        ? Array.from({ length: maxLevel }, (_, i) => i < curLevel ? '◆' : '◇').join(' ')
+        : 'NEW';
+      const levelText = scene.add.text(CONTENT_X, levelY, levelStr, {
+        fontFamily: 'Arial Black, Arial',
+        fontSize:   isLvlUp ? '24px' : '22px',
+        color:      isLvlUp ? rarityCSS : '#FF9A3C',
+        fontStyle:  'bold',
+      }).setOrigin(0, 0);
       container.add(levelText);
     }
 
-    // Thin separator line
-    const sepGfx = scene.add.graphics();
-    sepGfx.lineStyle(1, rarityHex, 0.3);
-    sepGfx.lineBetween(contentX, -CARD_H / 2 + 30 + 108, contentX + contentW, -CARD_H / 2 + 30 + 108);
-    container.add(sepGfx);
-
-    // Description
-    const descText = scene.add.text(contentX, CARD_H / 2 - 50, cardDesc, {
-      fontFamily: 'Arial', fontSize: '18px', color: '#BBBBBB',
-      wordWrap: { width: contentW },
-      lineSpacing: 4,
-    }).setOrigin(0, 0.5);
+    // Description — anchored to bottom, much bigger font
+    const descY = CARD_H / 2 - 22;
+    const descText = scene.add.text(CONTENT_X, descY, cardDesc, {
+      fontFamily: 'Arial',
+      fontSize:   '26px',
+      color:      '#B8CDE0',
+      wordWrap:   { width: CONTENT_W },
+      lineSpacing: 6,
+    }).setOrigin(0, 1);
     container.add(descText);
 
-    // ── Hit zone ─────────────────────────────────────────────────────
-    const hitZone = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
+    // ── Hit zone ───────────────────────────────────────────────────
+    const hitZone = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0x000000, 0).setInteractive({ useHandCursor: true });
     container.add(hitZone);
 
     hitZone.on('pointerover', () => {
       if (!this.active) return;
-      scene.tweens.add({ targets: container, scaleX: 1.03, scaleY: 1.03, duration: 90 });
-      bg.clear();
-      this._drawCardBg(bg, rarityHex, true);
+      scene.tweens.add({ targets: container, scaleX: 1.025, scaleY: 1.025, duration: 80 });
+      bg.clear(); this._drawCardBg(bg, rarityHex, true);
     });
-
     hitZone.on('pointerout', () => {
       if (!this.active) return;
-      scene.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 90 });
-      bg.clear();
-      this._drawCardBg(bg, rarityHex, false);
+      scene.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 80 });
+      bg.clear(); this._drawCardBg(bg, rarityHex, false);
     });
-
     hitZone.on('pointerdown', () => {
       if (!this.active) return;
       this.active = false;
       this._onCardSelected(container, data);
     });
 
-    // Slide in from right with stagger
-    scene.tweens.add({
-      targets: container,
-      x,
-      duration: 350,
-      delay: index * 100,
-      ease: 'Back.easeOut',
-    });
+    scene.tweens.add({ targets: container, x, duration: 380, delay: index * 90, ease: 'Back.easeOut' });
 
-    // Gold shimmer on GOLD rarity
     if (rarity === 'GOLD') {
-      scene.tweens.add({
-        targets: bg,
-        alpha: { from: 0.7, to: 1.0 },
-        duration: 700,
-        yoyo: true,
-        repeat: -1,
-      });
+      scene.tweens.add({ targets: bg, alpha: { from: 0.80, to: 1.0 }, duration: 700, yoyo: true, repeat: -1 });
     }
 
     return { container, data };
   }
 
-  // Draws the card background. Called for initial draw and on hover/out.
-  // highlighted = true on hover (brighter glow, white border)
   _drawCardBg(bg, rarityHex, highlighted) {
-    // Outer ambient glow
+    const hw = CARD_W / 2;
+    const hh = CARD_H / 2;
+
+    // ── Outer glow (rarity coloured) ─────────────────────────────
     if (highlighted) {
-      bg.lineStyle(14, 0xFFCC44, 0.15);
-      bg.strokeRoundedRect(-CARD_W / 2 - 5, -CARD_H / 2 - 5, CARD_W + 10, CARD_H + 10, 16);
-      bg.lineStyle(8,  0xFFDD66, 0.28);
-      bg.strokeRoundedRect(-CARD_W / 2 - 3, -CARD_H / 2 - 3, CARD_W + 6,  CARD_H + 6,  15);
-      bg.lineStyle(4,  0xFFEE88, 0.40);
-      bg.strokeRoundedRect(-CARD_W / 2 - 1, -CARD_H / 2 - 1, CARD_W + 2,  CARD_H + 2,  13);
+      bg.lineStyle(28, rarityHex, 0.18);
+      bg.strokeRoundedRect(-hw-12, -hh-12, CARD_W+24, CARD_H+24, 24);
+      bg.lineStyle(14, rarityHex, 0.38);
+      bg.strokeRoundedRect(-hw-6,  -hh-6,  CARD_W+12, CARD_H+12, 20);
+      bg.lineStyle(5,  rarityHex, 0.65);
+      bg.strokeRoundedRect(-hw-1,  -hh-1,  CARD_W+2,  CARD_H+2,  16);
     } else {
-      bg.lineStyle(12, 0xFFAA00, 0.05);
-      bg.strokeRoundedRect(-CARD_W / 2 - 5, -CARD_H / 2 - 5, CARD_W + 10, CARD_H + 10, 16);
-      bg.lineStyle(7,  0xFFBB22, 0.11);
-      bg.strokeRoundedRect(-CARD_W / 2 - 3, -CARD_H / 2 - 3, CARD_W + 6,  CARD_H + 6,  15);
-      bg.lineStyle(4,  0xFFCC44, 0.18);
-      bg.strokeRoundedRect(-CARD_W / 2 - 1, -CARD_H / 2 - 1, CARD_W + 2,  CARD_H + 2,  13);
+      bg.lineStyle(20, rarityHex, 0.08);
+      bg.strokeRoundedRect(-hw-8,  -hh-8,  CARD_W+16, CARD_H+16, 24);
+      bg.lineStyle(10, rarityHex, 0.18);
+      bg.strokeRoundedRect(-hw-4,  -hh-4,  CARD_W+8,  CARD_H+8,  20);
+      bg.lineStyle(3,  rarityHex, 0.40);
+      bg.strokeRoundedRect(-hw-1,  -hh-1,  CARD_W+2,  CARD_H+2,  16);
     }
 
-    // Card body — near-black base
-    bg.fillStyle(highlighted ? 0x080820 : 0x060612, 0.97);
-    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 12);
+    // ── Card body — solid dark ────────────────────────────────────
+    bg.fillStyle(highlighted ? 0x0e0e2a : 0x09091e, 0.98);
+    bg.fillRoundedRect(-hw, -hh, CARD_W, CARD_H, 16);
 
-    // Rarity tint overlay — makes the card color immediately obvious
-    bg.fillStyle(rarityHex, highlighted ? 0.18 : 0.12);
-    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 12);
+    // ── Rarity header band — SOLID, prominent ─────────────────────
+    bg.fillStyle(rarityHex, highlighted ? 0.92 : 0.82);
+    bg.fillRoundedRect(-hw, -hh, CARD_W, BAND_H, { tl: 16, tr: 16, bl: 0, br: 0 });
 
-    // Top color band — strongest rarity presence
-    bg.fillStyle(rarityHex, highlighted ? 0.45 : 0.30);
-    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, 44, { tl: 12, tr: 12, bl: 0, br: 0 });
+    // Diagonal stripes over band — subtle tech texture
+    bg.lineStyle(1, 0xffffff, highlighted ? 0.12 : 0.07);
+    for (let sx = -hw - BAND_H; sx < hw + BAND_H; sx += 36) {
+      bg.lineBetween(sx, -hh + BAND_H, sx + BAND_H, -hh);
+    }
 
-    // Left accent bar — thick
-    bg.fillStyle(rarityHex, 1);
-    bg.fillRoundedRect(-CARD_W / 2 + 3, -CARD_H / 2 + 3, 10, CARD_H - 6,
-      { tl: 10, tr: 0, bl: 10, br: 0 });
+    // Subtle rarity wash on card body
+    bg.fillStyle(rarityHex, highlighted ? 0.12 : 0.07);
+    bg.fillRoundedRect(-hw, -hh + BAND_H, CARD_W, CARD_H - BAND_H, { tl: 0, tr: 0, bl: 16, br: 16 });
 
-    // Border
-    bg.lineStyle(highlighted ? 3 : 2, highlighted ? 0xffffff : rarityHex, highlighted ? 0.9 : 0.85);
-    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 12);
+    // ── Separator line above description area ─────────────────────
+    const sepY = hh - 88;
+    bg.lineStyle(1, rarityHex, highlighted ? 0.50 : 0.30);
+    bg.lineBetween(CONTENT_X, sepY, hw - 28, sepY);
+
+    // ── Corner bracket ornaments ──────────────────────────────────
+    const bracketLen = 22;
+    const bracketAlpha = highlighted ? 0.80 : 0.45;
+    bg.lineStyle(2, rarityHex, bracketAlpha);
+    // Bottom-left
+    bg.lineBetween(-hw + 16, hh - 16, -hw + 16 + bracketLen, hh - 16);
+    bg.lineBetween(-hw + 16, hh - 16, -hw + 16, hh - 16 - bracketLen);
+    // Bottom-right
+    bg.lineBetween(hw - 16, hh - 16, hw - 16 - bracketLen, hh - 16);
+    bg.lineBetween(hw - 16, hh - 16, hw - 16, hh - 16 - bracketLen);
+
+    // ── Border ────────────────────────────────────────────────────
+    bg.lineStyle(
+      highlighted ? 3 : 2,
+      highlighted ? 0xffffff : rarityHex,
+      highlighted ? 0.95 : 0.80
+    );
+    bg.strokeRoundedRect(-hw, -hh, CARD_W, CARD_H, 16);
+
+    // Inner highlight line along top of card body (below band)
+    bg.lineStyle(1, 0xffffff, highlighted ? 0.14 : 0.06);
+    bg.lineBetween(-hw + 16, -hh + BAND_H + 1, hw - 16, -hh + BAND_H + 1);
   }
 
   _onCardSelected(selectedContainer, data) {
     const scene = this.scene;
-
-    scene.tweens.add({ targets: selectedContainer, scaleX: 1.1, scaleY: 1.1, duration: 200 });
-
+    scene.tweens.add({ targets: selectedContainer, scaleX: 1.07, scaleY: 1.07, duration: 160 });
     this.cards.forEach(({ container }) => {
-      if (container !== selectedContainer) {
-        scene.tweens.add({ targets: container, alpha: 0, duration: 200 });
-      }
+      if (container !== selectedContainer) scene.tweens.add({ targets: container, alpha: 0, duration: 160 });
     });
-
     scene.time.paused = false;
     scene.time.delayedCall(300, () => {
       this.upgradeManager.applyUpgrade(data.upgrade.id);
@@ -328,7 +331,7 @@ export class UpgradeCardUI {
   _cleanup() {
     this.cards.forEach(({ container }) => container.destroy());
     this.cards = [];
-    if (this.overlay) { this.overlay.destroy(); this.overlay = null; }
+    if (this.overlay)    { this.overlay.destroy();    this.overlay    = null; }
     if (this.headerText) { this.headerText.destroy(); this.headerText = null; }
     this.active = false;
   }

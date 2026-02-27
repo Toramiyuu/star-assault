@@ -1,31 +1,145 @@
+import { ProceduralMusic } from './ProceduralMusic.js';
+
 export class AudioManager {
     constructor() {
-        this.ctx = null;
-        this.musicGain = null;
-        this.musicOsc = null;
+        this.scene = null;
         this.enabled = true;
+        this.ctx = null;
+        this.masterGain = null;
+        this.proceduralMusic = new ProceduralMusic();
     }
 
-    init() {
-        try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.3;
-            this.masterGain.connect(this.ctx.destination);
-        } catch { this.enabled = false; }
+    /** Call from GameScene.create() — pass `this` (the scene). */
+    init(scene) {
+        this.scene = scene;
+        this.hasSFX = scene.cache.audio.exists("sfx_shoot");
+
+        // Always create Web Audio context (for procedural music + SFX fallback)
+        if (!this.ctx) {
+            try {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.3;
+                this.masterGain.connect(this.ctx.destination);
+            } catch {
+                this.enabled = false;
+            }
+        }
+
+        if (this.ctx) {
+            this.proceduralMusic.init(this.ctx);
+        }
     }
 
     resume() {
-        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx && this.ctx.state === "suspended") {
+            this.ctx.resume();
+        }
     }
 
-    tone(freq, duration, type = 'square', vol = 0.2, detune = 0) {
-        if (!this.enabled || !this.ctx) return;
+    // ── Play helpers (Phaser audio) ───────────────────────────────
+    _play(key, volume = 0.5) {
+        if (!this.enabled || !this.scene) return;
+        if (this.hasSFX && this.scene.cache.audio.exists(key)) {
+            this.scene.sound.play(key, { volume });
+        }
+    }
+
+    playShoot() {
+        if (this.hasSFX) return this._play("sfx_shoot", 0.35);
+        this._tone(880, 0.08, "square", 0.1);
+        this._tone(440, 0.05, "sawtooth", 0.05);
+    }
+
+    playEnemyExplosion() {
+        if (this.hasSFX) return this._play("sfx_enemy_explosion", 0.5);
+        this._noise(0.3, 0.2);
+        this._tone(120, 0.3, "sine", 0.15);
+    }
+
+    playPlayerHit() {
+        if (this.hasSFX) return this._play("sfx_player_hit", 0.6);
+        this._tone(200, 0.2, "sawtooth", 0.25);
+        this._tone(100, 0.3, "sine", 0.2);
+    }
+
+    playBossExplosion() {
+        if (this.hasSFX) return this._play("sfx_boss_explosion", 0.7);
+        this._noise(0.8, 0.3);
+        this._tone(80, 0.5, "sine", 0.25);
+        this._tone(60, 0.8, "sine", 0.2);
+    }
+
+    playShieldHit() {
+        // Metallic ping — shield absorbs hit
+        this._tone(600, 0.08, "sine", 0.15);
+        this._tone(1200, 0.06, "square", 0.08);
+    }
+
+    playShieldBreak() {
+        // Glass shatter — descending noise + tone
+        this._noise(0.25, 0.2);
+        this._tone(800, 0.1, "sawtooth", 0.15);
+        this._tone(400, 0.15, "sawtooth", 0.1);
+    }
+
+    playShieldRecharge() {
+        // Rising chime — shield pip restored
+        this._tone(440, 0.08, "sine", 0.1);
+        setTimeout(() => this._tone(660, 0.08, "sine", 0.1), 60);
+        setTimeout(() => this._tone(880, 0.12, "sine", 0.12), 120);
+    }
+
+    playPowerUp() {
+        if (this.hasSFX) return this._play("sfx_powerup", 0.5);
+        this._tone(523, 0.1, "sine", 0.2);
+        setTimeout(() => this._tone(659, 0.1, "sine", 0.2), 80);
+        setTimeout(() => this._tone(784, 0.15, "sine", 0.2), 160);
+    }
+
+    playWaveComplete() {
+        if (this.hasSFX) return this._play("sfx_wave_complete", 0.5);
+        this._tone(440, 0.15, "sine", 0.15);
+        setTimeout(() => this._tone(554, 0.15, "sine", 0.15), 120);
+        setTimeout(() => this._tone(659, 0.15, "sine", 0.15), 240);
+        setTimeout(() => this._tone(880, 0.3, "sine", 0.2), 360);
+    }
+
+    playBossLaughEntry() {
+        this._play("sfx_boss_laugh_entry", 0.7);
+    }
+
+    playBossLaughAngry() {
+        this._play("sfx_boss_laugh_angry", 0.8);
+    }
+
+    playBossDeathScream() {
+        this._play("sfx_boss_death_scream", 0.8);
+    }
+
+    // ── Music ─────────────────────────────────────────────────────
+    startMusic() {
+        if (!this.enabled) return;
+        this.proceduralMusic.start('cruise');
+    }
+
+    /** Crossfade to a new music phase: 'cruise', 'combat', or 'boss' */
+    setMusicPhase(phase) {
+        if (!this.enabled) return;
+        this.proceduralMusic.transition(phase);
+    }
+
+    stopMusic() {
+        this.proceduralMusic.stop();
+    }
+
+    // ── Web Audio fallback (oscillator / noise) ───────────────────
+    _tone(freq, duration, type = "square", vol = 0.2) {
+        if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = type;
         osc.frequency.value = freq;
-        osc.detune.value = detune;
         gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
         osc.connect(gain);
@@ -34,8 +148,8 @@ export class AudioManager {
         osc.stop(this.ctx.currentTime + duration);
     }
 
-    noise(duration, vol = 0.15) {
-        if (!this.enabled || !this.ctx) return;
+    _noise(duration, vol = 0.15) {
+        if (!this.ctx) return;
         const bufferSize = this.ctx.sampleRate * duration;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -48,69 +162,5 @@ export class AudioManager {
         source.connect(gain);
         gain.connect(this.masterGain);
         source.start();
-    }
-
-    playShoot() {
-        this.tone(880, 0.08, 'square', 0.1);
-        this.tone(440, 0.05, 'sawtooth', 0.05);
-    }
-
-    playEnemyExplosion() {
-        this.noise(0.3, 0.2);
-        this.tone(120, 0.3, 'sine', 0.15);
-    }
-
-    playPlayerHit() {
-        this.tone(200, 0.2, 'sawtooth', 0.25);
-        this.tone(100, 0.3, 'sine', 0.2);
-    }
-
-    playBossExplosion() {
-        this.noise(0.8, 0.3);
-        this.tone(80, 0.5, 'sine', 0.25);
-        this.tone(60, 0.8, 'sine', 0.2);
-    }
-
-    playPowerUp() {
-        this.tone(523, 0.1, 'sine', 0.2);
-        setTimeout(() => this.tone(659, 0.1, 'sine', 0.2), 80);
-        setTimeout(() => this.tone(784, 0.15, 'sine', 0.2), 160);
-    }
-
-    playWaveComplete() {
-        this.tone(440, 0.15, 'sine', 0.15);
-        setTimeout(() => this.tone(554, 0.15, 'sine', 0.15), 120);
-        setTimeout(() => this.tone(659, 0.15, 'sine', 0.15), 240);
-        setTimeout(() => this.tone(880, 0.3, 'sine', 0.2), 360);
-    }
-
-    startMusic() {
-        if (!this.enabled || !this.ctx) return;
-        this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = 0.04;
-        this.musicGain.connect(this.masterGain);
-
-        const bass = this.ctx.createOscillator();
-        bass.type = 'triangle';
-        bass.frequency.value = 55;
-        bass.connect(this.musicGain);
-        bass.start();
-        this.musicOsc = bass;
-
-        const lfo = this.ctx.createOscillator();
-        const lfoGain = this.ctx.createGain();
-        lfo.frequency.value = 0.3;
-        lfoGain.gain.value = 10;
-        lfo.connect(lfoGain);
-        lfoGain.connect(bass.frequency);
-        lfo.start();
-        this.musicLfo = lfo;
-    }
-
-    stopMusic() {
-        try {
-            if (this.musicOsc) { this.musicOsc.stop(); this.musicOsc = null; }
-            if (this.musicLfo) { this.musicLfo.stop(); this.musicLfo = null; }
-        } catch { /* ignore */ }
     }
 }

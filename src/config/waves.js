@@ -1,454 +1,231 @@
-export const WAVE_DEFINITIONS = [
+// Enemy type base stats for horde-survival mode
+export const ENEMY_TYPES = {
+  grunt: {
+    sprites: ['enemy_01', 'enemy_02'],
+    speed: 90,
+    hp: 10,
+    fireRate: 3000,
+    tint: null,
+  },
+  zigzagger: {
+    sprites: ['enemy_03'],
+    speed: 110,
+    hp: 15,
+    fireRate: 5000,
+    tint: 0x00ffff,
+  },
+  diver: {
+    sprites: ['enemy_04'],
+    speed: 200,
+    hp: 18,
+    fireRate: 9999,
+    tint: 0xff4444,
+  },
+  formation_leader: {
+    sprites: ['enemy_05'],
+    speed: 70,
+    hp: 30,
+    fireRate: 4500,
+    tint: 0xffff00,
+    shield: 2,
+  },
+  bomber: {
+    sprites: ['enemy_06'],
+    speed: 60,
+    hp: 40,
+    fireRate: 9999,
+    tint: 0xff6600,
+    shield: 2,
+    detonateRadius: 220,
+    telegraphTime: 1200,
+    aoeRadius: 180,
+  },
+};
+
+// Wave configs: minAlive = minimum enemies on screen, spawnInterval = ms between spawns,
+// duration = ms before next wave (0 = until boss defeated), enemies = weighted pool
+export const WAVE_CONFIGS = [
+  // Wave 1: Grunts only — gentler
   {
-    wave: 1,
+    minAlive: 2, spawnInterval: 3500, duration: 22000,
+    enemies: [{ type: 'grunt', weight: 1 }],
+  },
+  // Wave 2: Grunts + Zigzaggers — gentler
+  {
+    minAlive: 3, spawnInterval: 3000, duration: 22000,
+    enemies: [{ type: 'grunt', weight: 2 }, { type: 'zigzagger', weight: 1 }],
+  },
+  // Wave 3: Grunts + Zigzaggers + Divers — gentler
+  {
+    minAlive: 5, spawnInterval: 2500, duration: 25000,
     enemies: [
-      {
-        type: "enemy_01",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 4,
-        hp: 1,
-        speed: 120,
-        fireRate: 3000,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 1 },
     ],
   },
+  // Wave 4: All standard types — gentler
   {
-    wave: 2,
+    minAlive: 8, spawnInterval: 2000, duration: 25000,
     enemies: [
-      {
-        type: "enemy_01",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 5,
-        hp: 1,
-        speed: 130,
-        fireRate: 2800,
-      },
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 2,
-        hp: 1,
-        speed: 125,
-        fireRate: 2900,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 1 },
+      { type: 'formation_leader', weight: 1 },
     ],
   },
+  // Wave 5: + Bombers
   {
-    wave: 3,
+    minAlive: 12, spawnInterval: 1500, duration: 28000,
     enemies: [
-      {
-        type: "enemy_01",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 6,
-        hp: 1,
-        speed: 140,
-        fireRate: 2600,
-      },
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "formation",
-        count: 4,
-        hp: 1,
-        speed: 120,
-        fireRate: 2800,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 2 },
+      { type: 'formation_leader', weight: 1 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 6: All types heavy
   {
-    wave: 4,
+    minAlive: 14, spawnInterval: 1200, duration: 28000,
     enemies: [
-      {
-        type: "enemy_01",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 4,
-        hp: 1,
-        speed: 140,
-        fireRate: 2500,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 3,
-        hp: 2,
-        speed: 130,
-        fireRate: 2500,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 3 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 2 },
+      { type: 'formation_leader', weight: 1 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 7: Formation Leaders in pairs
   {
-    wave: 5,
+    minAlive: 16, spawnInterval: 1000, duration: 30000,
     enemies: [
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 5,
-        hp: 1,
-        speed: 150,
-        fireRate: 2400,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 4,
-        hp: 2,
-        speed: 140,
-        fireRate: 2300,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 1 },
+      { type: 'zigzagger', weight: 1 },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 2 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 8: Elites more frequent
   {
-    wave: 6,
+    minAlive: 18, spawnInterval: 900, duration: 30000,
     enemies: [
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "formation",
-        count: 6,
-        hp: 1,
-        speed: 150,
-        fireRate: 2200,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 5,
-        hp: 2,
-        speed: 145,
-        fireRate: 2200,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 2 },
+      { type: 'formation_leader', weight: 3 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 9: Pre-boss barrage
   {
-    wave: 7,
+    minAlive: 20, spawnInterval: 700, duration: 30000,
     enemies: [
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 4,
-        hp: 1,
-        speed: 155,
-        fireRate: 2200,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 3,
-        hp: 2,
-        speed: 150,
-        fireRate: 2000,
-        tint: 0x00ffff,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 2,
-        hp: 2,
-        speed: 200,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 2,
-        hp: 3,
-        speed: 100,
-        fireRate: 2000,
-        tint: 0xffff00,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 3 },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 2 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 10: AAX Boss + continuous grunt harassment
   {
-    wave: 8,
+    boss: 'boss_aax', bossHP: 2000,
+    minAlive: 5, spawnInterval: 2000, duration: 0,
+    enemies: [{ type: 'grunt', weight: 1 }],
+  },
+  // Wave 11
+  {
+    minAlive: 18, spawnInterval: 800, duration: 28000,
+    hpMultiplier: 1.2,
     enemies: [
-      {
-        type: "enemy_02",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 4,
-        hp: 1,
-        speed: 160,
-        fireRate: 2100,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 3,
-        hp: 2,
-        speed: 155,
-        fireRate: 1900,
-        tint: 0x00ffff,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 3,
-        hp: 2,
-        speed: 210,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 2,
-        hp: 3,
-        speed: 110,
-        fireRate: 1900,
-        tint: 0xffff00,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 2 },
+      { type: 'formation_leader', weight: 2 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 12
   {
-    wave: 9,
+    minAlive: 20, spawnInterval: 700, duration: 28000,
+    hpMultiplier: 1.3,
     enemies: [
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 4,
-        hp: 3,
-        speed: 120,
-        fireRate: 1800,
-        tint: 0xffff00,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 5,
-        hp: 2,
-        speed: 220,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 3,
-        hp: 2,
-        speed: 160,
-        fireRate: 1900,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 1 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 2 },
+      { type: 'bomber', weight: 1 },
     ],
   },
-  { wave: 10, boss: "boss_aax", bossHP: 600, enemies: [] },
+  // Wave 13
   {
-    wave: 11,
-    mines: 2,
+    minAlive: 22, spawnInterval: 700, duration: 30000,
+    hpMultiplier: 1.4,
     enemies: [
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 3,
-        hp: 3,
-        speed: 160,
-        fireRate: 1700,
-        tint: 0xffff00,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 4,
-        hp: 2,
-        speed: 230,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 4,
-        hp: 2,
-        speed: 165,
-        fireRate: 1800,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 3 },
+      { type: 'bomber', weight: 1 },
     ],
   },
+  // Wave 14
   {
-    wave: 12,
-    mines: 3,
+    minAlive: 24, spawnInterval: 600, duration: 30000,
+    hpMultiplier: 1.5,
     enemies: [
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 5,
-        hp: 3,
-        speed: 240,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 4,
-        hp: 4,
-        speed: 170,
-        fireRate: 1600,
-        tint: 0xffff00,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 3,
-        hp: 2,
-        speed: 170,
-        fireRate: 1700,
-        tint: 0x00ffff,
-      },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 3 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'grunt', weight: 1 },
+      { type: 'bomber', weight: 2 },
     ],
   },
+  // Wave 15: Boss + harassment
   {
-    wave: 13,
-    mines: 3,
+    boss: 'boss_aax', bossHP: 3500,
+    minAlive: 8, spawnInterval: 1500, duration: 0,
     enemies: [
-      {
-        type: "enemy_01",
-        enemyType: "grunt",
-        pattern: "straight",
-        count: 4,
-        hp: 2,
-        speed: 180,
-        fireRate: 1800,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 5,
-        hp: 3,
-        speed: 250,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 3,
-        hp: 4,
-        speed: 180,
-        fireRate: 1500,
-        tint: 0xffff00,
-      },
-      {
-        type: "enemy_03",
-        enemyType: "zigzagger",
-        pattern: "zigzag",
-        count: 4,
-        hp: 3,
-        speed: 175,
-        fireRate: 1600,
-        tint: 0x00ffff,
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 1 },
     ],
   },
-  {
-    wave: 14,
-    mines: 4,
-    enemies: [
-      {
-        type: "enemy_05",
-        enemyType: "formation_leader",
-        pattern: "arc",
-        count: 6,
-        hp: 4,
-        speed: 190,
-        fireRate: 1400,
-        tint: 0xffff00,
-      },
-      {
-        type: "enemy_04",
-        enemyType: "diver",
-        pattern: "diver",
-        count: 6,
-        hp: 3,
-        speed: 260,
-        fireRate: 9999,
-        tint: 0xff4444,
-      },
-    ],
-  },
-  { wave: 15, boss: "boss_aax", bossHP: 900, enemies: [] },
 ];
 
-export function generateEscalationWave(waveNum) {
+export function generateEscalationConfig(waveNum) {
   const scale = 1 + (waveNum - 15) * 0.1;
-  const mineCount = Math.min(2 + Math.floor((waveNum - 15) / 2), 8);
-  const typeDefs = [
-    { type: "enemy_01", enemyType: "grunt", pattern: "straight", tint: null },
-    {
-      type: "enemy_03",
-      enemyType: "zigzagger",
-      pattern: "zigzag",
-      tint: 0x00ffff,
-    },
-    { type: "enemy_04", enemyType: "diver", pattern: "diver", tint: 0xff4444 },
-    {
-      type: "enemy_05",
-      enemyType: "formation_leader",
-      pattern: "arc",
-      tint: 0xffff00,
-    },
-  ];
-  const t1 = typeDefs[(waveNum - 1) % typeDefs.length];
-  const t2 = typeDefs[waveNum % typeDefs.length];
+  const minAlive = Math.min(20 + Math.floor((waveNum - 15) * 0.5), 30);
+  const spawnInterval = Math.max(400, Math.floor(800 / scale));
+
+  // Every 5th wave is a boss wave
+  if (waveNum % 5 === 0) {
+    return {
+      boss: 'boss_aax',
+      bossHP: 600 + (waveNum - 10) * 40,
+      minAlive: 8,
+      spawnInterval: 1500,
+      duration: 0,
+      enemies: [
+        { type: 'grunt', weight: 2 },
+        { type: 'zigzagger', weight: 1 },
+      ],
+      hpMultiplier: scale,
+    };
+  }
+
   return {
-    wave: waveNum,
-    mines: mineCount,
+    minAlive,
+    spawnInterval,
+    duration: 30000,
+    hpMultiplier: scale,
     enemies: [
-      {
-        ...t1,
-        count: 4 + Math.floor((waveNum - 15) * 0.5),
-        hp: Math.min(2 + Math.floor((waveNum - 15) / 3), 6),
-        speed: Math.floor(200 * scale),
-        fireRate:
-          t1.enemyType === "diver"
-            ? 9999
-            : Math.max(600, Math.floor(1400 / scale)),
-      },
-      {
-        ...t2,
-        count: 3 + Math.floor((waveNum - 15) * 0.4),
-        hp: Math.min(2 + Math.floor((waveNum - 15) / 4), 5),
-        speed: Math.floor(180 * scale),
-        fireRate:
-          t2.enemyType === "diver"
-            ? 9999
-            : Math.max(700, Math.floor(1500 / scale)),
-      },
+      { type: 'grunt', weight: 2 },
+      { type: 'zigzagger', weight: 2 },
+      { type: 'diver', weight: 3 },
+      { type: 'formation_leader', weight: 2 },
+      { type: 'bomber', weight: 1 },
     ],
-    ...(waveNum % 5 === 0
-      ? { boss: "boss_aax", bossHP: 600 + waveNum * 40 }
-      : {}),
   };
 }

@@ -6,20 +6,20 @@ export const GAME = {
 
 export const PLAYER = {
     SPEED: 8,
-    MAX_HP: 3,
-    INVULNERABILITY_DURATION: 2000,
+    MAX_HP: 5,
+    INVULNERABILITY_DURATION: 2500,
     FIRE_RATE: 200,
     BULLET_SPEED: -800,
 };
 
 export const ENEMIES = {
     BASIC_SPEED: 150,
-    BASIC_HP: 1,
+    BASIC_HP: 10,
     BASIC_FIRE_RATE: 2000,
     ELITE_SPEED: 200,
-    ELITE_HP: 2,
+    ELITE_HP: 20,
     ELITE_FIRE_RATE: 1500,
-    BULLET_SPEED: 400,
+    BULLET_SPEED: 280,
 };
 
 export const BOSSES = {

@@ -95,8 +95,13 @@ export class XPManager {
         continue;
       }
 
-      // Magnetized orbs are tweened by GroundDropManager — skip physics, just draw
+      // Magnetized orbs chase the player's live position each frame
       if (orb.magnetized) {
+        const step = Math.min(1, (900 * dt) / Math.max(dist, 1));
+        orb.x += dx * step;
+        orb.y += dy * step;
+        this._gfx.lineStyle(2, 0xFF6600, 0.35);
+        this._gfx.lineBetween(orb.x, orb.y, orb.x + dx * 0.25, orb.y + dy * 0.25);
         this._drawOrb(this._gfx, orb, time);
         continue;
       }
@@ -136,7 +141,6 @@ export class XPManager {
   addXP(amount) {
     this.xp += amount;
     const threshold = this.getThreshold();
-
     if (this.xp >= threshold) {
       this.xp -= threshold;
       this.level++;

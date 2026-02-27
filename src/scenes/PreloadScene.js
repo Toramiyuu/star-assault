@@ -183,7 +183,8 @@ export class PreloadScene extends Scene {
     this.scene.start("Menu");
   }
 
-  // Strip solid backgrounds from AI-generated drop PNGs (same technique as boss sprites)
+  // Strip solid backgrounds from AI-generated drop PNGs.
+  // Uses corner-flood-fill so it handles any BG color (black, white, grey).
   _processDropPNGs() {
     for (const type of ['heart', 'shield', 'bomb', 'magnet', 'boost', 'elite_shard']) {
       const srcKey = `drop_${type}_src`;
@@ -192,7 +193,7 @@ export class PreloadScene extends Scene {
       // Require a real image, not Phaser's tiny error placeholder
       if (src && src.width > 32) {
         try {
-          const canvas = this._removeWhiteBG(src.image);
+          const canvas = this._removeCornerBG(src.image);
           this.textures.addCanvas(`drop_${type}`, canvas);
         } catch (e) {
           console.warn(`[drops] bg removal failed for ${type}, falling back to programmatic`);
@@ -200,6 +201,52 @@ export class PreloadScene extends Scene {
       }
       this.textures.remove(srcKey);
     }
+  }
+
+  // Flood-fill background removal seeded from all 4 corners.
+  // Works for any uniform BG color (black, white, grey, etc.).
+  _removeCornerBG(image, thresh = 50) {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const px = data.data;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Use top-left corner as the reference background color
+    const bgR = px[0], bgG = px[1], bgB = px[2];
+
+    const visited = new Uint8Array(w * h);
+    const qx = [], qy = [];
+
+    const tryAdd = (x, y) => {
+      if (x < 0 || x >= w || y < 0 || y >= h) return;
+      const pi = y * w + x;
+      if (visited[pi]) return;
+      const i = pi * 4;
+      const dist = Math.abs(px[i] - bgR) + Math.abs(px[i + 1] - bgG) + Math.abs(px[i + 2] - bgB);
+      if (dist < thresh) {
+        visited[pi] = 1;
+        qx.push(x); qy.push(y);
+      }
+    };
+
+    // Seed from all 4 corners
+    tryAdd(0, 0); tryAdd(w - 1, 0); tryAdd(0, h - 1); tryAdd(w - 1, h - 1);
+
+    let qi = 0;
+    while (qi < qx.length) {
+      const x = qx[qi], y = qy[qi]; qi++;
+      px[(y * w + x) * 4 + 3] = 0; // transparent
+      tryAdd(x - 1, y); tryAdd(x + 1, y);
+      tryAdd(x, y - 1); tryAdd(x, y + 1);
+    }
+
+    ctx.putImageData(data, 0, 0);
+    return canvas;
   }
 
   // Circle-clip AI-generated upgrade icons so they display as perfect circles

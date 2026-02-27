@@ -1,5 +1,6 @@
 import { GAME } from "../config/constants.js";
 import { AAXBoss } from "../entities/AAXBoss.js";
+import { triggerVictory } from "../scenes/GameScenePlayer.js";
 
 const BOSS_SCALE = 0.5;
 const ENEMY_BULLET_SCALE = 0.15;
@@ -17,10 +18,13 @@ export class BossManager {
     this.aaxBoss = null;
   }
 
-  spawn(bossKey, hp) {
+  spawn(bossKey, hp, instant) {
+    // Switch to epic boss music
+    this.scene.audio.setMusicPhase('boss');
+
     if (bossKey === "boss_aax") {
       this.aaxBoss = new AAXBoss(this.scene, this.random, this);
-      this.aaxBoss.spawn(hp);
+      this.aaxBoss.spawn(hp, instant);
       this.active = true;
       return;
     }
@@ -80,7 +84,7 @@ export class BossManager {
     this.active = false;
     this.aaxBoss = null;
     this.sprite = null;
-    this.scene.waveManager.onBossDefeated();
+    triggerVictory(this.scene);
   }
 
   startAttack() {
@@ -125,7 +129,7 @@ export class BossManager {
         b.setActive(true)
           .setVisible(true)
           .setScale(ENEMY_BULLET_SCALE * 1.3)
-          .setTint(0xff0000);
+          .setTintFill(0xff0000);
         b.body.enable = true;
         b.setVelocity(Math.cos(angle) * 350, Math.sin(angle) * 350);
         b.body.setSize(b.width * 0.5, b.height * 0.5);
@@ -141,17 +145,8 @@ export class BossManager {
           }
         };
       }
-      if (Math.random() < 0.15) {
-        scene.waveManager.spawnEnemyFromDef({
-          type: "enemy_05",
-          pattern: "straight",
-          count: 1,
-          index: 0,
-          hp: 1,
-          speed: 200,
-          fireRate: 2000,
-        });
-      }
+      // Grunt harassment during boss fight is handled by WaveManager's
+      // continuous spawning system (boss wave configs include minAlive grunts)
     }
   }
 

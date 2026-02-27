@@ -141,7 +141,7 @@ export class MenuScene extends Scene {
       }
 
       this.input.keyboard.once("keydown-D", () => {
-        this.scene.start("Game", { seed });
+        this.scene.start("Game", { seed, dev: devMode });
       });
       this.showLeaderboard(1350);
     }

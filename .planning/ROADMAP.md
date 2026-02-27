@@ -83,6 +83,15 @@ Plans:
 - [ ] 03-02-PLAN.md — Load craftpix explosion/fragment assets; implement flashEnemy() hit flash (white/red/cyan/crit variants); craftpix death explosion + 4 fragment scatter (CMBT-01, CMBT-03)
 - [ ] 03-03-PLAN.md — TwinLaser cyan glow ring + 100ms kill linger; drawEnemyHealthBars dirty-flag guard; real-time HP drain during beam contact (CMBT-02, POL-03)
 
+### Phase 03.1: Visual Asset Utilization (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 03.1 to break down)
+
 ### Phase 4: Floating Text + Combat Polish
 **Goal**: Kill events, critical hits, and level-ups are punctuated with satisfying text and animation feedback — the game communicates its rewards clearly
 **Depends on**: Phase 3
