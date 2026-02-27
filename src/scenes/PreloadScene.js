@@ -69,6 +69,23 @@ export class PreloadScene extends Scene {
       );
     }
 
+    // Craftpix enemy explosion (8 frames, 1-indexed source files)
+    for (let i = 0; i < 8; i++) {
+      const frameNum = String(i + 1).padStart(3, '0');  // '001' through '008'
+      this.load.image(
+        `craftpix_enemy_expl_${i}`,
+        'assets/craftpix-981156-space-shooter-game-kit/Enemy-spaceship-game-sprites/PNG/Ship_Effects_Sprites/Explosion_' + frameNum + '.png'
+      );
+    }
+
+    // Craftpix enemy ship fragments (4 sprites)
+    for (let i = 1; i <= 4; i++) {
+      this.load.image(
+        `craftpix_enemy_frag_${i}`,
+        'assets/craftpix-981156-space-shooter-game-kit/Enemy-spaceship-game-sprites/PNG/Ship_Effects/Ship_Fragment_' + i + '.png'
+      );
+    }
+
     for (let i = 1; i <= 3; i++) {
       const id = String(i).padStart(2, "0");
       this.load.image(`boss_${id}`, `assets/bosses/boss_${id}.png`);
@@ -95,8 +112,7 @@ export class PreloadScene extends Scene {
       this.load.image(`drop_${type}_src`, `assets/drops/${type}.png`);
     }
 
-    // Upgrade icons — optional AI-generated PNGs (scripts/generate-upgrade-icons.js)
-    // UpgradeCardUI checks textures.exists() and falls back to letter circle if absent
+    // Upgrade icons — loaded as _src, circle-clipped in create() via _processUpgradeIcons()
     for (const id of [
       'G01','G02','G03','G04','G05','G06',
       'Gn01','Gn02','Gn03','Gn04','Gn05','Gn06','Gn07','Gn08',
@@ -105,7 +121,7 @@ export class PreloadScene extends Scene {
       'R01','R02','R03','R04','R05','R06',
       'Au01','Au02','Au03','Au04',
     ]) {
-      this.load.image(`upgrade_${id}`, `assets/upgrade-icons/${id}.png`);
+      this.load.image(`upgrade_${id}_src`, `assets/upgrade-icons/${id}.png`);
     }
 
     this.load.audio("sfx_shoot", "assets/sfx/shoot.mp3");
@@ -163,6 +179,7 @@ export class PreloadScene extends Scene {
 
     this._processDropPNGs();      // strip solid backgrounds from AI-generated PNGs
     this._generateDropTextures(); // programmatic fallback for any that didn't load
+    this._processUpgradeIcons();  // circle-clip AI-generated upgrade icons
     this.scene.start("Menu");
   }
 
@@ -180,6 +197,42 @@ export class PreloadScene extends Scene {
         } catch (e) {
           console.warn(`[drops] bg removal failed for ${type}, falling back to programmatic`);
         }
+      }
+      this.textures.remove(srcKey);
+    }
+  }
+
+  // Circle-clip AI-generated upgrade icons so they display as perfect circles
+  // with no white/grey square corners from the source PNG.
+  _processUpgradeIcons() {
+    const SIZE = 172; // matches ICON_R * 2 in UpgradeCardUI (86 * 2)
+    const ids = [
+      'G01','G02','G03','G04','G05','G06',
+      'Gn01','Gn02','Gn03','Gn04','Gn05','Gn06','Gn07','Gn08',
+      'B01','B02','B03','B04','B05','B06','B07','B08',
+      'P01','P02','P03','P04','P05','P06','P07','P08',
+      'R01','R02','R03','R04','R05','R06',
+      'Au01','Au02','Au03','Au04',
+    ];
+    for (const id of ids) {
+      const srcKey = `upgrade_${id}_src`;
+      if (!this.textures.exists(srcKey)) continue;
+      const src = this.textures.get(srcKey).source[0];
+      if (!src || src.width < 32) { this.textures.remove(srcKey); continue; }
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 1, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(src.image, 0, 0, SIZE, SIZE);
+        ctx.restore();
+        this.textures.addCanvas(`upgrade_${id}`, canvas);
+      } catch (e) {
+        console.warn(`[upgrade-icons] circle-clip failed for ${id}:`, e.message);
       }
       this.textures.remove(srcKey);
     }
@@ -352,92 +405,114 @@ export class PreloadScene extends Scene {
     const idx = (x, y) => (y * w + x) * 4;
     const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
-    // Sample corners to identify the two checkerboard colors
-    const corners = [
-      [0, 0], [1, 0], [0, 1], [1, 1],
-      [w - 1, 0], [w - 2, 0], [w - 1, 1],
-      [0, h - 1], [1, h - 1], [0, h - 2],
-      [w - 1, h - 1], [w - 2, h - 1], [w - 1, h - 2],
-    ];
-    const cornerColors = new Map();
-    for (const [cx, cy] of corners) {
-      const i = idx(cx, cy);
-      const qr = Math.round(px[i] / 5) * 5;
-      const qg = Math.round(px[i + 1] / 5) * 5;
-      const qb = Math.round(px[i + 2] / 5) * 5;
-      const key = `${qr},${qg},${qb}`;
-      cornerColors.set(key, (cornerColors.get(key) || 0) + 1);
-    }
-    const sorted = [...cornerColors.entries()].sort((a, b) => b[1] - a[1]);
-    const colorA = sorted[0][0].split(",").map(Number);
-    const colorB = sorted.length > 1 ? sorted[1][0].split(",").map(Number) : colorA;
-
     const colorDist = (r, g, b, ref) =>
       Math.abs(r - ref[0]) + Math.abs(g - ref[1]) + Math.abs(b - ref[2]);
-    const THRESH = 55;
 
+    // A pixel is "neutral" (candidate background) if it is grayish and not near-black.
+    // This prevents colourful sprite pixels (orange flames, red horns, skin tones) from
+    // ever being added to the BG palette or accidentally removed as background.
+    const isNeutral = (r, g, b) => {
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      return (max - min) < 40 && max > 60;
+    };
+
+    // Sample full edge perimeter — skip saturated/dark sprite pixels that happen to
+    // reach the image border (e.g. flames touching the top edge of the boss sprite).
+    const edgeColors = new Map();
+    const sampleEdge = (ex, ey) => {
+      const i = idx(ex, ey);
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      if (!isNeutral(r, g, b)) return;
+      const qr = Math.round(r / 5) * 5;
+      const qg = Math.round(g / 5) * 5;
+      const qb = Math.round(b / 5) * 5;
+      const key = `${qr},${qg},${qb}`;
+      edgeColors.set(key, (edgeColors.get(key) || 0) + 1);
+    };
+    for (let ex = 0; ex < w; ex += 3) {
+      sampleEdge(ex, 0); sampleEdge(ex, 1); sampleEdge(ex, h - 2); sampleEdge(ex, h - 1);
+    }
+    for (let ey = 0; ey < h; ey += 3) {
+      sampleEdge(0, ey); sampleEdge(1, ey); sampleEdge(w - 2, ey); sampleEdge(w - 1, ey);
+    }
+
+    // No neutral edge pixels → no removable background
+    if (edgeColors.size === 0) { ctx.putImageData(data, 0, 0); return canvas; }
+
+    const sorted = [...edgeColors.entries()].sort((a, b) => b[1] - a[1]);
+    const bgPalette = sorted.slice(0, 4).map(e => e[0].split(',').map(Number));
+
+    const THRESH = 60;
+
+    // A pixel is BG only if it is neutral AND colour-close to the detected palette.
+    // Colourful pixels are never classified as background regardless of palette proximity.
     const isBG = (x, y) => {
       const i = idx(x, y);
       const r = px[i], g = px[i + 1], b = px[i + 2];
-      return colorDist(r, g, b, colorA) < THRESH || colorDist(r, g, b, colorB) < THRESH;
+      if (!isNeutral(r, g, b)) return false;
+      return bgPalette.some(ref => colorDist(r, g, b, ref) < THRESH);
     };
 
-    // Flood fill from all edge pixels that match background colors
+    // Pass 1: flood-fill from all edge BG pixels (removes outer/connected background)
     const removed = new Uint8Array(w * h);
     const queue = [];
-
     for (let x = 0; x < w; x++) {
-      if (isBG(x, 0)) { removed[x] = 1; queue.push(x); }
-      const bi = (h - 1) * w + x;
-      if (isBG(x, h - 1)) { removed[bi] = 1; queue.push(bi); }
+      if (isBG(x, 0))     { removed[x] = 1;               queue.push(x); }
+      if (isBG(x, h - 1)) { const bi = (h - 1) * w + x;  removed[bi] = 1; queue.push(bi); }
     }
     for (let y = 1; y < h - 1; y++) {
-      if (isBG(0, y)) { removed[y * w] = 1; queue.push(y * w); }
-      const ri = y * w + w - 1;
-      if (isBG(w - 1, y)) { removed[ri] = 1; queue.push(ri); }
+      if (isBG(0, y))     { removed[y * w] = 1;           queue.push(y * w); }
+      if (isBG(w - 1, y)) { const ri = y * w + w - 1;     removed[ri] = 1; queue.push(ri); }
     }
-
     let head = 0;
     while (head < queue.length) {
       const pi = queue[head++];
-      const x = pi % w;
-      const y = (pi - x) / w;
+      const x = pi % w, y = (pi - x) / w;
       for (const [dx, dy] of DIRS) {
         const nx = x + dx, ny = y + dy;
         if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
         const npi = ny * w + nx;
         if (removed[npi]) continue;
-        if (isBG(nx, ny)) {
-          removed[npi] = 1;
-          queue.push(npi);
-        }
+        if (isBG(nx, ny)) { removed[npi] = 1; queue.push(npi); }
       }
     }
 
-    // Make all flooded pixels transparent
+    // Pass 2: remove interior BG islands — checkerboard regions enclosed by sprite
+    // content (e.g. the area behind the boss head, surrounded by flames) are never
+    // reachable from the edge by the flood-fill above, so sweep globally and remove
+    // any remaining pixel that still qualifies as BG.
+    for (let i = 0; i < w * h; i++) {
+      if (!removed[i]) {
+        const x = i % w, y = (i - x) / w;
+        if (isBG(x, y)) removed[i] = 1;
+      }
+    }
+
+    // Apply transparency
     for (let i = 0; i < w * h; i++) {
       if (removed[i]) px[i * 4 + 3] = 0;
     }
 
-    // Anti-alias edges: fade non-removed pixels that are near bg colors and border removed area
+    // Anti-alias: fade neutral edge pixels bordering removed areas
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const pi = y * w + x;
         if (removed[pi]) continue;
         const i = idx(x, y);
         const r = px[i], g = px[i + 1], b = px[i + 2];
-        const minDist = Math.min(colorDist(r, g, b, colorA), colorDist(r, g, b, colorB));
-        if (minDist < 55) {
+        if (!isNeutral(r, g, b)) continue;
+        const minDist = Math.min(...bgPalette.map(ref => colorDist(r, g, b, ref)));
+        if (minDist < THRESH) {
           let bordersRemoved = false;
           for (const [dx, dy] of DIRS) {
             const nx = x + dx, ny = y + dy;
             if (nx >= 0 && nx < w && ny >= 0 && ny < h && removed[ny * w + nx]) {
-              bordersRemoved = true;
-              break;
+              bordersRemoved = true; break;
             }
           }
           if (bordersRemoved) {
-            const t = 1 - minDist / 55;
+            const t = 1 - minDist / THRESH;
             px[i + 3] = Math.floor(px[i + 3] * (1 - t * 0.85));
           }
         }
