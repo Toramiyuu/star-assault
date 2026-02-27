@@ -18,7 +18,7 @@ Requirements for the UX overhaul milestone. All map to roadmap phases.
 - [ ] **CMBT-01**: Player sees a brief white flash on an enemy when their bullet lands (hit confirmation within 100ms)
 - [ ] **CMBT-02**: Enemy health bars visibly drain in real-time during twin laser beam contact (health drain tug animation)
 - [ ] **CMBT-03**: Enemy deaths produce a particle burst (5-8 colored particles) — enemies do not silently disappear
-- [ ] **CMBT-04**: TwinLaser and bomb kills correctly trigger kill streak, ground drop spawns, and XP orb rewards (AoE kill logic consolidated)
+- [x] **CMBT-04**: TwinLaser and bomb kills correctly trigger kill streak, ground drop spawns, and XP orb rewards (AoE kill logic consolidated)
 
 ### Polish
 
@@ -66,7 +66,7 @@ Deferred to future milestones. Not in current roadmap.
 | CMBT-01 | Phase 3 — Weapon Visual Feedback | Pending |
 | CMBT-02 | Phase 3 — Weapon Visual Feedback | Pending |
 | CMBT-03 | Phase 3 — Weapon Visual Feedback | Pending |
-| CMBT-04 | Phase 3 — Weapon Visual Feedback | Pending |
+| CMBT-04 | Phase 3 — Weapon Visual Feedback | Complete |
 | POL-03 | Phase 3 — Weapon Visual Feedback | Pending |
 | POL-01 | Phase 4 — Floating Text + Combat Polish | Pending |
 | POL-02 | Phase 4 — Floating Text + Combat Polish | Pending |

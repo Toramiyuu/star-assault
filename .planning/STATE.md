@@ -45,6 +45,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01.1-hud-layout-rethink P02 | 15 | 1 tasks | 1 files |
 | Phase 02-drop-icons P01 | 2 | 1 tasks | 1 files |
 | Phase 02-drop-icons P02 | 3 | 3 tasks | 1 files |
+| Phase 03 P01 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Progress: [█████░░░░░] 50%
 - [Phase 02-drop-icons]: _generateDropTextures() called in create() not preload() — Phaser Graphics API requires scene context not available during preload()
 - [Phase 02-drop-icons]: Boot-time texture baking pattern established: this.make.graphics({ add: false }) -> draw -> generateTexture() -> destroy()
 - [Phase 02-drop-icons]: Sprite drop pattern: scene.add.image with boot-time textures; drop.sprite=null after _playCollectBurst so tween owns destroy lifecycle; xpManager.orbs array iterated directly for MAG fix (not orbGroup.getChildren)
+- [Phase 03]: killEnemy() extracted to CombatUtils.js as canonical kill side-effect chain for all weapons — TwinLaser and bomb kills were bypassing kill streak, XP orbs, and ground drops — centralization fixes this and prevents future weapons from having the same bug
 
 ### Roadmap Evolution
 
