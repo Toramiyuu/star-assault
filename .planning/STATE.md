@@ -46,6 +46,8 @@ Progress: [█████░░░░░] 50%
 | Phase 02-drop-icons P01 | 2 | 1 tasks | 1 files |
 | Phase 02-drop-icons P02 | 3 | 3 tasks | 1 files |
 | Phase 03 P01 | 8 | 2 tasks | 5 files |
+| Phase 03 P02 | 8 | 2 tasks | 3 files |
+| Phase 03 P03 | 7 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +70,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 02-drop-icons]: Boot-time texture baking pattern established: this.make.graphics({ add: false }) -> draw -> generateTexture() -> destroy()
 - [Phase 02-drop-icons]: Sprite drop pattern: scene.add.image with boot-time textures; drop.sprite=null after _playCollectBurst so tween owns destroy lifecycle; xpManager.orbs array iterated directly for MAG fix (not orbGroup.getChildren)
 - [Phase 03]: killEnemy() extracted to CombatUtils.js as canonical kill side-effect chain for all weapons — TwinLaser and bomb kills were bypassing kill streak, XP orbs, and ground drops — centralization fixes this and prevents future weapons from having the same bug
+- [Phase 03]: flashEnemy() timer-gate pattern: _flashTimer data key on enemy cancels pending restore before each new flash — prevents stacking at high fire rates — Rapid fire (TwinLaser 100ms ticks) would cause flash stacking without gate; previous inline delayedCall approach couldn't cancel itself
+- [Phase 03]: drawEnemyHealthBars dirty-flag: frame-level anyChanged scan chosen over per-enemy Graphics objects — single shared Graphics cannot do partial clears — STATE.md blocker resolved: per-frame redraw eliminated when no HP changes; TwinLaser 100ms ticks still trigger redraws for real-time drain (CMBT-02)
 
 ### Roadmap Evolution
 

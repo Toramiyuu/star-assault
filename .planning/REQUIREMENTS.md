@@ -15,16 +15,16 @@ Requirements for the UX overhaul milestone. All map to roadmap phases.
 
 ### Combat Feedback
 
-- [ ] **CMBT-01**: Player sees a brief white flash on an enemy when their bullet lands (hit confirmation within 100ms)
-- [ ] **CMBT-02**: Enemy health bars visibly drain in real-time during twin laser beam contact (health drain tug animation)
-- [ ] **CMBT-03**: Enemy deaths produce a particle burst (5-8 colored particles) — enemies do not silently disappear
+- [x] **CMBT-01**: Player sees a brief white flash on an enemy when their bullet lands (hit confirmation within 100ms)
+- [x] **CMBT-02**: Enemy health bars visibly drain in real-time during twin laser beam contact (health drain tug animation)
+- [x] **CMBT-03**: Enemy deaths produce a particle burst (5-8 colored particles) — enemies do not silently disappear
 - [x] **CMBT-04**: TwinLaser and bomb kills correctly trigger kill streak, ground drop spawns, and XP orb rewards (AoE kill logic consolidated)
 
 ### Polish
 
 - [ ] **POL-01**: Level-up upgrade cards slide in from the bottom of the screen with a bounce easing animation
 - [ ] **POL-02**: Floating damage numbers appear on kill and critical hit events (not on every laser tick)
-- [ ] **POL-03**: The twin laser shows a sustained glow/highlight on the enemy currently being targeted by the beam
+- [x] **POL-03**: The twin laser shows a sustained glow/highlight on the enemy currently being targeted by the beam
 
 ## v2 Requirements
 
@@ -63,11 +63,11 @@ Deferred to future milestones. Not in current roadmap.
 | VISC-01 | Phase 1 — HUD Foundations + XP Orb Clarity | Complete |
 | VISC-03 | Phase 1 — HUD Foundations + XP Orb Clarity | Complete |
 | VISC-02 | Phase 2 — Ground Drop Icon System | Complete |
-| CMBT-01 | Phase 3 — Weapon Visual Feedback | Pending |
-| CMBT-02 | Phase 3 — Weapon Visual Feedback | Pending |
-| CMBT-03 | Phase 3 — Weapon Visual Feedback | Pending |
+| CMBT-01 | Phase 3 — Weapon Visual Feedback | Complete |
+| CMBT-02 | Phase 3 — Weapon Visual Feedback | Complete |
+| CMBT-03 | Phase 3 — Weapon Visual Feedback | Complete |
 | CMBT-04 | Phase 3 — Weapon Visual Feedback | Complete |
-| POL-03 | Phase 3 — Weapon Visual Feedback | Pending |
+| POL-03 | Phase 3 — Weapon Visual Feedback | Complete |
 | POL-01 | Phase 4 — Floating Text + Combat Polish | Pending |
 | POL-02 | Phase 4 — Floating Text + Combat Polish | Pending |
 
