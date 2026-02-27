@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * Generate pixel-art drop icons using Google Imagen 3.
+ * Generate pixel-art drop icons using gemini-3.1-flash-image-preview.
  *
  * Usage:
  *   GEMINI_API_KEY=your_key node scripts/generate-drop-icons.js
  *
- * Saves PNGs to assets/drops/. Run once; re-run any icon by deleting its file
- * and running again (each call produces a different result).
+ * Saves PNGs to assets/drops/. Delete a file and re-run to regenerate it.
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -23,7 +22,8 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-// Shared style suffix appended to every prompt
+const MODEL = 'gemini-3.1-flash-image-preview';
+
 const STYLE =
   'retro 16-bit pixel art game sprite, bold chunky pixels, limited color palette, ' +
   'centered on a small dark circular background, black outer background, ' +
@@ -40,7 +40,7 @@ const ICONS = {
   },
   bomb: {
     file: 'bomb.png',
-    prompt: `bomb pickup icon, classic cartoon round bomb, dark grey sphere with shiny highlight, short brown fuse with bright orange glowing lit tip, ${STYLE}`,
+    prompt: `bomb pickup icon, classic cartoon round bomb, dark grey sphere with shiny white highlight, short brown fuse with bright orange glowing lit tip, ${STYLE}`,
   },
   magnet: {
     file: 'magnet.png',
@@ -52,13 +52,12 @@ const ICONS = {
   },
   elite_shard: {
     file: 'elite_shard.png',
-    prompt: `rare crystal shard pickup icon, faceted gem crystal, purple and gold colors, multiple facets with light reflection, glowing magical aura, ${STYLE} dark purple circular background`,
+    prompt: `rare crystal shard pickup icon, faceted gem crystal, purple and gold colors, multiple facets with light reflection, glowing magical aura, ${STYLE}, dark purple circular background`,
   },
 };
 
 async function generateIcon(name, cfg) {
   const outPath = resolve(OUT_DIR, cfg.file);
-
   if (existsSync(outPath)) {
     console.log(`  skip ${name} (already exists — delete to regenerate)`);
     return;
@@ -67,31 +66,41 @@ async function generateIcon(name, cfg) {
   process.stdout.write(`  generating ${name}...`);
 
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `imagen-3.0-generate-001:predict?key=${API_KEY}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      instances: [{ prompt: cfg.prompt }],
-      parameters: { sampleCount: 1, aspectRatio: '1:1' },
+      contents: [{ parts: [{ text: cfg.prompt }] }],
+      generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
     }),
   });
 
   if (!res.ok) {
     const text = await res.text();
     console.log(` FAILED`);
-    console.error(`    API ${res.status}: ${text.slice(0, 200)}`);
+    console.error(`    API ${res.status}: ${text.slice(0, 300)}`);
     return;
   }
 
   const data = await res.json();
-  const b64 = data?.predictions?.[0]?.bytesBase64Encoded;
+
+  // Find the first image part in any candidate
+  let b64 = null;
+  for (const candidate of data.candidates ?? []) {
+    for (const part of candidate.content?.parts ?? []) {
+      if (part.inlineData?.mimeType?.startsWith('image/')) {
+        b64 = part.inlineData.data;
+        break;
+      }
+    }
+    if (b64) break;
+  }
 
   if (!b64) {
     console.log(` FAILED`);
-    console.error(`    No image data in response: ${JSON.stringify(data).slice(0, 200)}`);
+    console.error(`    No image in response: ${JSON.stringify(data).slice(0, 300)}`);
     return;
   }
 
@@ -100,11 +109,8 @@ async function generateIcon(name, cfg) {
 }
 
 async function main() {
-  console.log('Star Assault — generating drop icons via Imagen 3\n');
-
-  if (!existsSync(OUT_DIR)) {
-    await mkdir(OUT_DIR, { recursive: true });
-  }
+  console.log(`Star Assault — generating drop icons via ${MODEL}\n`);
+  if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
 
   for (const [name, cfg] of Object.entries(ICONS)) {
     try {
@@ -114,10 +120,8 @@ async function main() {
     }
   }
 
-  console.log(
-    '\nDone! Run `npm run dev` to see new icons.' +
-    '\nIf any icon looks wrong, delete its PNG and re-run — each call differs.'
-  );
+  console.log('\nDone! Run `npm run dev` to see new icons.');
+  console.log('If any icon looks wrong, delete its PNG and re-run.');
 }
 
 main();
