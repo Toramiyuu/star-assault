@@ -27,16 +27,31 @@ const config = {
 const game = new Phaser.Game(config);
 window.__GAME__ = game;
 
-// Size the fixed HUD bars to exactly match the canvas edges (fills letterbox precisely)
+// Position HUD bars to overlay the canvas edges — always visible regardless of letterbox
+const HUD_TOP_H = 64;   // px — matches safe zone at top of game
+const HUD_BOT_H = 42;   // px — matches XP bar height
+
 function fitHudBars() {
     const canvas = document.querySelector('canvas');
     if (!canvas || canvas.offsetHeight === 0) {
         requestAnimationFrame(fitHudBars);
         return;
     }
-    const rect = canvas.getBoundingClientRect();
-    document.getElementById('hud-top').style.height    = Math.max(0, Math.round(rect.top)) + 'px';
-    document.getElementById('hud-bottom').style.height = Math.max(0, Math.round(window.innerHeight - rect.bottom)) + 'px';
+    const rect   = canvas.getBoundingClientRect();
+    const top    = document.getElementById('hud-top');
+    const bottom = document.getElementById('hud-bottom');
+
+    // Overlay top edge of canvas
+    top.style.top    = Math.round(rect.top)  + 'px';
+    top.style.left   = Math.round(rect.left) + 'px';
+    top.style.width  = Math.round(rect.width) + 'px';
+    top.style.height = HUD_TOP_H + 'px';
+
+    // Overlay bottom edge of canvas
+    bottom.style.top    = Math.round(rect.bottom - HUD_BOT_H) + 'px';
+    bottom.style.left   = Math.round(rect.left) + 'px';
+    bottom.style.width  = Math.round(rect.width) + 'px';
+    bottom.style.height = HUD_BOT_H + 'px';
 }
 
 game.events.on('ready', () => requestAnimationFrame(fitHudBars));
