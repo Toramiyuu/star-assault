@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 2 of 4 (Ground Drop Icon System — next up)
-Plan: 1 of 2 in current phase — Plan 02-01 complete, Plan 02-02 (GroundDropManager sprite migration) is next
-Status: Phase 2 IN PROGRESS — drop icon textures baked (commit 04e061c)
-Last activity: 2026-02-27 — Completed plan 02-01: six drop icon textures added to PreloadScene.create() via generateTexture() pattern (commit 04e061c)
+Phase: 2 of 4 (Ground Drop Icon System — COMPLETE)
+Plan: 2 of 2 in current phase — Plan 02-02 complete (GroundDropManager sprite migration)
+Status: Phase 2 COMPLETE — sprite-based drops with bob/flicker/collect-burst/sparkle (commit c3bd2b2)
+Last activity: 2026-02-27 — Completed plan 02-02: GroundDropManager fully rewritten with sprite-based drops, MAG crash fix, collect burst animation (commit c3bd2b2)
 
-Progress: [████░░░░░░] 38%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [████░░░░░░] 38%
 | Phase 01.1-hud-layout-rethink P01 | 8 | 2 tasks | 1 files |
 | Phase 01.1-hud-layout-rethink P02 | 15 | 1 tasks | 1 files |
 | Phase 02-drop-icons P01 | 2 | 1 tasks | 1 files |
+| Phase 02-drop-icons P02 | 3 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,7 @@ Progress: [████░░░░░░] 38%
 - [Phase 01.1-hud-layout-rethink P02]: Viewport-validated HUD dimensions: BAR_W=320/BAR_H=18 at SHIELD_Y=80/HEALTH_Y=106; backgrounds thin strips (hudBg 130px/0.55alpha, xpBotGrad 28px/0.40alpha); XP_BAR_Y=1872, BOSS_BAR_Y=140
 - [Phase 02-drop-icons]: _generateDropTextures() called in create() not preload() — Phaser Graphics API requires scene context not available during preload()
 - [Phase 02-drop-icons]: Boot-time texture baking pattern established: this.make.graphics({ add: false }) -> draw -> generateTexture() -> destroy()
+- [Phase 02-drop-icons]: Sprite drop pattern: scene.add.image with boot-time textures; drop.sprite=null after _playCollectBurst so tween owns destroy lifecycle; xpManager.orbs array iterated directly for MAG fix (not orbGroup.getChildren)
 
 ### Roadmap Evolution
 
@@ -71,7 +73,7 @@ Progress: [████░░░░░░] 38%
 
 ### Pending Todos
 
-- Fix crash when picking up MAG drop (GroundDropManager, area: gameplay)
+- (RESOLVED) Fix crash when picking up MAG drop — fixed in 02-02 via xpManager.orbs array iteration
 
 ### Blockers/Concerns
 
@@ -82,5 +84,5 @@ Progress: [████░░░░░░] 38%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 02-01-PLAN.md — Six drop icon textures baked in PreloadScene.create() (drop_heart, drop_shield, drop_bomb, drop_magnet, drop_boost, drop_elite_shard) using generateTexture() pattern with add:false + destroy() cleanup (commit 04e061c). Plan 02-02 (GroundDropManager sprite migration) is next.
+Stopped at: Completed 02-02-PLAN.md — GroundDropManager sprite migration: sprite-based drops (add.image), sinusoidal bob, urgency flicker, collect burst, EliteShard sparkles, MAG crash fix, all floating text removed (commit c3bd2b2). Phase 02-drop-icons COMPLETE. Phase 3 is next.
 Resume file: None
