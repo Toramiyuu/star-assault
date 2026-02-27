@@ -32,9 +32,13 @@ export function killEnemy(scene, enemy) {
   const isElite = enemy.getData('isElite') || false;
   const bomberState = enemy.getData('bomberState');
 
-  // 4. Explosion + audio
-  scene.explosions.play(x, y, 'enemy_explosion', 9, 0.12);
+  // 4. Explosion + audio — craftpix 8-frame set, scale by enemy type
+  const explScale = _getExplosionScale(enemyType, isElite);
+  scene.explosions.play(x, y, 'craftpix_enemy_expl', 8, explScale);
   scene.audio.playEnemyExplosion();
+
+  // Fragment scatter — 4 craftpix fragments radiate outward, fade + shrink
+  _spawnFragments(scene, x, y, isElite ? 1.4 : 1.0);
 
   // 5. Camera shake
   scene.cameras.main.shake(80, 0.003);
@@ -80,6 +84,59 @@ export function killEnemy(scene, enemy) {
   enemy.destroy();
   scene.waveManager.onEnemyRemoved();
 }
+
+// ─── Private helpers (not exported) ────────────────────────────────────────
+
+/**
+ * Returns the craftpix explosion scale for a given enemy type and elite status.
+ * Bombers get a smaller explosion (their AoE is the real spectacle).
+ * Elites get a larger explosion as a reward signal.
+ *
+ * @param {string} enemyType
+ * @param {boolean} isElite
+ * @returns {number}
+ */
+function _getExplosionScale(enemyType, isElite) {
+  if (enemyType === 'bomber') return isElite ? 0.16 : 0.08;
+  if (isElite) return 0.20;
+  return 0.14;
+}
+
+/**
+ * Scatter 4 craftpix fragment sprites radially from the kill position.
+ * Fragments fade and shrink to zero, then are destroyed.
+ * Math.random() is intentional here — fragments are purely cosmetic.
+ *
+ * @param {Phaser.Scene} scene
+ * @param {number} x
+ * @param {number} y
+ * @param {number} scaleMultiplier - 1.0 for normal, 1.4 for elite
+ */
+function _spawnFragments(scene, x, y, scaleMultiplier) {
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const fragIndex = (i % 4) + 1;  // 1 through 4
+    const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.5;
+    const speed = 80 + Math.random() * 60;
+    const frag = scene.add.image(x, y, `craftpix_enemy_frag_${fragIndex}`)
+      .setScale(scaleMultiplier * (0.3 + Math.random() * 0.2))
+      .setDepth(25)
+      .setAlpha(1);
+    scene.tweens.add({
+      targets: frag,
+      x: x + Math.cos(angle) * speed,
+      y: y + Math.sin(angle) * speed,
+      scaleX: 0,
+      scaleY: 0,
+      alpha: 0,
+      duration: 400 + Math.random() * 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => frag.destroy(),
+    });
+  }
+}
+
+// ─── Public exports ──────────────────────────────────────────────────────────
 
 /**
  * Flash an enemy sprite with a color for a short duration.

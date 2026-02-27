@@ -1,4 +1,4 @@
-import { killEnemy } from '../utils/CombatUtils.js';
+import { killEnemy, flashEnemy } from '../utils/CombatUtils.js';
 
 export function setupCollisions(scene) {
   scene.physics.add.overlap(
@@ -71,18 +71,8 @@ function onBulletHitEnemy(scene, bullet, enemy) {
   if (shield > 0) {
     shield--;
     enemy.setData('shield', shield);
-    // Cyan flash for shield hit
-    enemy.setTintFill(0x44ffff);
-    scene.time.delayedCall(80, () => {
-      if (enemy.active) {
-        if (enemy.getData('isElite')) {
-          enemy.setTint(0xffd700);
-        } else {
-          const bt = enemy.getData('baseTint');
-          bt ? enemy.setTint(bt) : enemy.clearTint();
-        }
-      }
-    });
+    // Cyan flash for shield hit (gated — won't stack at high fire rate)
+    flashEnemy(scene, enemy, 0x44ffff, 60);
     // Shield pip break effect
     scene.showFloatingText(enemy.x, enemy.y - 50, 'SHIELD!', '#44ffff');
     return; // Shield absorbed the hit
@@ -113,18 +103,23 @@ function onBulletHitEnemy(scene, bullet, enemy) {
   if (hp <= 0) {
     killEnemy(scene, enemy);
   } else {
-    // White hit flash
-    enemy.setTintFill(0xffffff);
-    scene.time.delayedCall(60, () => {
-      if (enemy.active) {
-        if (enemy.getData('isElite')) {
-          enemy.setTint(0xffd700);
-        } else {
-          const bt = enemy.getData('baseTint');
-          bt ? enemy.setTint(bt) : enemy.clearTint();
+    // Hit flash: white for normal, red for elite (signals tankier); crit gets orange follow-up
+    if (enemy.getData('isElite')) {
+      flashEnemy(scene, enemy, 0xff2222, 50);
+    } else {
+      flashEnemy(scene, enemy, 0xffffff, 50);
+    }
+    // Crit: after flash resolves, briefly show orange/gold rim
+    if (isCrit && !enemy.getData('isElite')) {
+      scene.time.delayedCall(55, () => {
+        if (enemy.active) {
+          enemy.setTint(0xff8800);
+          scene.time.delayedCall(120, () => {
+            if (enemy.active) enemy.clearTint();
+          });
         }
-      }
-    });
+      });
+    }
     // Damage number
     const dmgColor = isCrit ? '#ff8c00' : '#ffffff';
     const dmgSize = isCrit ? '40px' : '28px';
