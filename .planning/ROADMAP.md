@@ -40,7 +40,7 @@ Plans:
 **Goal:** Players can read all HUD elements at a glance during combat — bars, icons, and counters are sized and positioned for Survivor.io-quality clarity at actual mobile resolution (1080x1920)
 **Depends on:** Phase 1
 **Requirements:** VISC-03
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 **Success Criteria** (what must be TRUE):
   1. Shield and HP bars are large enough to read at a glance during wave combat — no squinting required at 375px CSS width (typical mobile viewport)
   2. All HUD elements are positioned to avoid obscuring the active play area — no critical game objects hidden behind UI during peak combat moments
@@ -55,15 +55,16 @@ Plans:
 **Goal**: Players identify ground drop type at a glance from the icon silhouette alone — no reading required, no ambiguity between types
 **Depends on**: Phase 1
 **Requirements**: VISC-02
+**Plans**: 2 plans
 **Success Criteria** (what must be TRUE):
   1. All six drop types (Heart, Shield, Bomb, Magnet, Boost, EliteShard) display a distinct visual icon — no text label appears on any drop
   2. Each icon category is color-coded by function: red for HP (Heart), blue for Shield, orange/yellow for utility (Bomb, Magnet, Boost), purple/gold for EliteShard
   3. Drop icons remain legible at actual mobile resolution — icon silhouettes are distinguishable without zooming
   4. Picking up a drop produces a collect flash that confirms the pick-up happened
-**Plans**: TBD
 
 Plans:
-- [ ] 02-01: Implement generateTexture() icon generation for all six drop types in PreloadScene; replace text labels with sprite icons in GroundDropManager
+- [ ] 02-01-PLAN.md — Generate all 6 drop icon textures in PreloadScene.create() via generateTexture() (heart, shield, bomb, magnet, boost, elite_shard)
+- [ ] 02-02-PLAN.md — Rewrite GroundDropManager: sprite-based drops, sinusoidal bob, urgency flicker, collect burst, EliteShard sparkles, MAG crash fix, remove floating text on collect
 
 ### Phase 3: Weapon Visual Feedback
 **Goal**: Every weapon hit, laser contact, and enemy death is visually confirmed — players never doubt whether their weapons are working
@@ -105,6 +106,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. HUD Foundations + XP Orb Clarity | 4/4 | Complete    | 2026-02-26 |
 | 1.1. HUD Layout Rethink | 2/2 | Complete    | 2026-02-27 |
-| 2. Ground Drop Icon System | 0/1 | Not started | - |
+| 2. Ground Drop Icon System | 0/2 | Not started | - |
 | 3. Weapon Visual Feedback | 0/3 | Not started | - |
 | 4. Floating Text + Combat Polish | 0/2 | Not started | - |
