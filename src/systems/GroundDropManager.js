@@ -1,4 +1,5 @@
 import { GAME } from '../config/constants.js';
+import { killEnemy } from '../utils/CombatUtils.js';
 
 // Safe spawn area — drops outside this range can't be reached by the player
 const SPAWN_X_MIN = 80;
@@ -248,20 +249,13 @@ export class GroundDropManager {
       }
 
       case 'magnet': {
-        // Tween all orbs toward player so they visibly rush in (no instant teleport)
+        // Flag all orbs to chase the player's live position each frame (XPManager handles movement).
+        // Stagger activation so orbs rush in as a wave rather than all at once.
         if (scene.xpManager && scene.xpManager.orbs) {
-          const px = scene.player.x;
-          const py = scene.player.y;
           scene.xpManager.orbs.forEach((orb, i) => {
             if (orb.magnetized) return;
-            orb.magnetized = true;
-            scene.tweens.add({
-              targets: orb,
-              x: px,
-              y: py,
-              duration: 700,
-              delay: i * 35,
-              ease: 'Cubic.easeIn',
+            scene.time.delayedCall(i * 30, () => {
+              orb.magnetized = true;
             });
           });
         }
@@ -509,13 +503,7 @@ export class GroundDropManager {
         });
 
         if (hp <= 0) {
-          scene.explosions.play(e.x, e.y, 'enemy_explosion', 9, 0.12);
-          if (scene.xpManager) {
-            const enemyType = e.getData('enemyType') || 'grunt';
-            scene.xpManager.spawnOrb(e.x, e.y, scene.xpManager.getXPForEnemy(enemyType));
-          }
-          e.destroy();
-          scene.waveManager.onEnemyRemoved();
+          killEnemy(scene, e);
         }
       }
     });
