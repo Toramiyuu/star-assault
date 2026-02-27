@@ -10,7 +10,7 @@ Requirements for the UX overhaul milestone. All map to roadmap phases.
 ### Visual Clarity
 
 - [x] **VISC-01**: Player can distinguish XP orbs from nebula backgrounds because orbs are orange/gold (not green)
-- [ ] **VISC-02**: Player can identify ground drop type at a glance via visual icon (heart, shield, bomb, magnet, boost, shard) — no text labels
+- [x] **VISC-02**: Player can identify ground drop type at a glance via visual icon (heart, shield, bomb, magnet, boost, shard) — no text labels
 - [x] **VISC-03**: Bottom stat bar (DMG/RATE/SPD/SH/HP/CRIT/PIER/STK) is removed from the gameplay HUD
 
 ### Combat Feedback
@@ -62,7 +62,7 @@ Deferred to future milestones. Not in current roadmap.
 |-------------|-------|--------|
 | VISC-01 | Phase 1 — HUD Foundations + XP Orb Clarity | Complete |
 | VISC-03 | Phase 1 — HUD Foundations + XP Orb Clarity | Complete |
-| VISC-02 | Phase 2 — Ground Drop Icon System | Pending |
+| VISC-02 | Phase 2 — Ground Drop Icon System | Complete |
 | CMBT-01 | Phase 3 — Weapon Visual Feedback | Pending |
 | CMBT-02 | Phase 3 — Weapon Visual Feedback | Pending |
 | CMBT-03 | Phase 3 — Weapon Visual Feedback | Pending |
