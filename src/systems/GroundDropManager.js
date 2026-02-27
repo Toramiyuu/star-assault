@@ -13,12 +13,16 @@ const DROPS = {
 const DROP_TYPES = Object.keys(DROPS);
 
 // --- Constants ---
-const MAX_DROPS = 12;
-const LIFETIME = 10000;
-const FADE_TIME = 2000;
+const MAX_DROPS   = 12;
+const LIFETIME    = 10000;
+const FADE_TIME   = 2000;
 const ATTRACT_DIST = 60;
 const COLLECT_DIST = 40;
-const DROP_SIZE = 16;
+
+// Bob and flicker constants
+const BOB_AMPLITUDE = 8;
+const BOB_SPEED     = 0.00418; // rad/ms — 1.5s full cycle (2π / 1500)
+const FLICKER_START = 7000;    // ms — begin urgency flicker at 7s
 
 export class GroundDropManager {
   constructor(scene, random) {
@@ -87,119 +91,43 @@ export class GroundDropManager {
   }
 
   // -----------------------------------------------------------------
-  //  Internal — create a single drop object
+  //  Internal — create a single drop object (sprite-based)
   // -----------------------------------------------------------------
 
   _createDrop(x, y, type) {
     const cfg = DROPS[type];
     if (!cfg) return;
 
-    const gfx = this.scene.add.graphics();
-    gfx.setPosition(x, y);
-    gfx.setDepth(8);
-
-    this._drawShape(gfx, cfg.shape, cfg.color);
-
-    // Label above drop
-    const label = this.scene.add.text(x, y - DROP_SIZE - 4, cfg.label, {
-      fontFamily: 'Arial',
-      fontSize: '12px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(9);
-
-    // Pulsing tween
-    this.scene.tweens.add({
-      targets: gfx,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    // Spin tween
-    this.scene.tweens.add({
-      targets: gfx,
-      angle: 360,
-      duration: 800,
-      repeat: -1,
-    });
+    const sprite = this.scene.add.image(x, y, `drop_${type}`);
+    sprite.setDepth(8);
+    sprite.setScale(1.0); // 80px texture renders at 80px; legible at 1080px wide mobile
 
     const drop = {
       x,
       y,
+      baseY: y,
       type,
       color: cfg.color,
       spawnTime: this.scene.time.now,
-      gfx,
-      label,
+      bobPhase: this.random() * Math.PI * 2, // random phase so drops don't sync
+      sprite,
       collected: false,
+      attracting: false,
+      sparkleTimer: 0,
     };
 
     this.drops.push(drop);
   }
 
-  _drawShape(gfx, shape, color) {
-    switch (shape) {
-      case 'heart':
-        // Filled circle, 10px radius
-        gfx.fillStyle(color, 1);
-        gfx.fillCircle(0, 0, 10);
-        break;
+  // -----------------------------------------------------------------
+  //  Internal — destroy a single drop's sprite
+  // -----------------------------------------------------------------
 
-      case 'shield':
-        // Hexagon (6-sided polygon, radius 8)
-        gfx.fillStyle(color, 1);
-        gfx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i - Math.PI / 2;
-          const px = Math.cos(angle) * 8;
-          const py = Math.sin(angle) * 8;
-          if (i === 0) gfx.moveTo(px, py);
-          else gfx.lineTo(px, py);
-        }
-        gfx.closePath();
-        gfx.fillPath();
-        break;
-
-      case 'bomb':
-        // Filled circle, 9px radius
-        gfx.fillStyle(color, 1);
-        gfx.fillCircle(0, 0, 9);
-        break;
-
-      case 'magnet':
-        // Ring (strokeCircle)
-        gfx.lineStyle(3, color, 1);
-        gfx.strokeCircle(0, 0, 8);
-        break;
-
-      case 'boost':
-        // Diamond (4 points)
-        gfx.fillStyle(color, 1);
-        gfx.beginPath();
-        gfx.moveTo(0, -8);
-        gfx.lineTo(6, 0);
-        gfx.lineTo(0, 8);
-        gfx.lineTo(-6, 0);
-        gfx.closePath();
-        gfx.fillPath();
-        break;
-
-      case 'elite_shard':
-        // Triangle (3 points)
-        gfx.fillStyle(color, 1);
-        gfx.beginPath();
-        gfx.moveTo(0, -8);
-        gfx.lineTo(7, 6);
-        gfx.lineTo(-7, 6);
-        gfx.closePath();
-        gfx.fillPath();
-        break;
+  _destroyDrop(drop) {
+    if (drop.sprite) {
+      this.scene.tweens.killTweensOf(drop.sprite);
+      drop.sprite.destroy();
+      drop.sprite = null;
     }
   }
 
@@ -221,29 +149,37 @@ export class GroundDropManager {
         continue;
       }
 
+      if (!drop.sprite) {
+        this.drops.splice(i, 1);
+        continue;
+      }
+
       const age = time - drop.spawnTime;
 
-      // Lifetime expired — destroy
       if (age > LIFETIME) {
         this._destroyDrop(drop);
         this.drops.splice(i, 1);
         continue;
       }
 
-      // Fade during last FADE_TIME ms
-      if (age > LIFETIME - FADE_TIME) {
-        const remaining = LIFETIME - age;
-        const alpha = remaining / FADE_TIME;
-        drop.gfx.setAlpha(alpha);
-        drop.label.setAlpha(alpha);
+      // --- Alpha / flicker ---
+      if (drop.attracting) {
+        drop.sprite.setAlpha(1);
+      } else if (age > FLICKER_START) {
+        const urgencyT = (age - FLICKER_START) / (LIFETIME - FLICKER_START);
+        const freq = 0.01 + urgencyT * 0.04;
+        drop.sprite.setAlpha(0.4 + 0.6 * Math.abs(Math.sin(time * freq)));
+      } else if (age > LIFETIME - FADE_TIME) {
+        drop.sprite.setAlpha((LIFETIME - age) / FADE_TIME);
+      } else {
+        drop.sprite.setAlpha(1);
       }
 
-      // Distance to player
+      // --- Distance ---
       const dx = px - drop.x;
       const dy = py - drop.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Collection
       if (dist < COLLECT_DIST) {
         this._collectDrop(drop);
         drop.collected = true;
@@ -251,12 +187,20 @@ export class GroundDropManager {
         continue;
       }
 
-      // Attraction — slide toward player
       if (dist < ATTRACT_DIST) {
+        drop.attracting = true;
         drop.x += dx * 0.1;
         drop.y += dy * 0.1;
-        drop.gfx.setPosition(drop.x, drop.y);
-        drop.label.setPosition(drop.x, drop.y - DROP_SIZE - 4);
+        drop.sprite.setPosition(drop.x, drop.y);
+      } else {
+        // Sinusoidal bob — stopped when attracting
+        const bobY = drop.baseY + BOB_AMPLITUDE * Math.sin(time * BOB_SPEED + drop.bobPhase);
+        drop.sprite.setPosition(drop.x, bobY);
+
+        // EliteShard sparkles while idle
+        if (drop.type === 'elite_shard') {
+          this._updateEliteShardSparkle(drop, delta);
+        }
       }
     }
   }
@@ -271,7 +215,6 @@ export class GroundDropManager {
     switch (drop.type) {
       case 'heart': {
         scene.hp = Math.min(scene.hp + 1, scene.playerMaxHP);
-        scene.showFloatingText(drop.x, drop.y - 20, '+1 HP', '#44ff44');
         if (scene.hud) scene.hud.update(scene.score, scene.hp);
         break;
       }
@@ -281,41 +224,39 @@ export class GroundDropManager {
           scene.playerShieldCurrent + 1,
           scene.playerShield
         );
-        scene.showFloatingText(drop.x, drop.y - 20, '+1 SHIELD', '#44ffff');
         if (scene.hud) scene.hud.update(scene.score, scene.hp);
         break;
       }
 
       case 'bomb': {
+        // Bomb drama is the feedback — skip collect burst; destroy sprite immediately
+        if (drop.sprite) { drop.sprite.destroy(); drop.sprite = null; }
         this._playBombDrama(drop.x, drop.y);
-        break;
+        return; // early return — sprite already gone, skip _playCollectBurst below
       }
 
       case 'magnet': {
-        // Pull all XP orbs to player instantly
-        if (scene.xpManager) {
-          const px = scene.player.x;
-          const py = scene.player.y;
-          scene.xpManager.orbGroup.getChildren().forEach(orb => {
-            if (!orb.active) return;
-            orb.x = px;
-            orb.y = py;
-            orb.setVelocity(0, 0);
+        // FIX: iterate xpManager.orbs array directly (NOT orbGroup.getChildren — that crashes)
+        if (scene.xpManager && scene.xpManager.orbs) {
+          const mpx = scene.player.x;
+          const mpy = scene.player.y;
+          scene.xpManager.orbs.forEach(orb => {
+            orb.x = mpx;
+            orb.y = mpy;
+            orb.vx = 0;
+            orb.vy = 0;
           });
         }
-        scene.showFloatingText(drop.x, drop.y - 20, 'MAGNET!', '#4488ff');
         break;
       }
 
       case 'boost': {
-        // +50% fire rate for 8 seconds
         if (scene.playerStats) {
           scene.playerStats.addPercent('playerFireRate', 0.5);
           scene.time.delayedCall(8000, () => {
             scene.playerStats.removePercent('playerFireRate', 0.5);
           });
         }
-        scene.showFloatingText(drop.x, drop.y - 20, 'BOOST!', '#ffff00');
         break;
       }
 
@@ -326,13 +267,73 @@ export class GroundDropManager {
           scene.isInvulnerable = false;
           if (scene.player?.active) scene.player.setAlpha(1);
         });
-        scene.showFloatingText(drop.x, drop.y - 20, '+STREAK', '#aa44ff');
         break;
       }
     }
 
-    // Destroy visuals
-    this._destroyDrop(drop);
+    // Collect burst for all non-bomb drops
+    this._playCollectBurst(drop.sprite);
+    drop.sprite = null; // burst tween owns the sprite now
+  }
+
+  // -----------------------------------------------------------------
+  //  Collect burst — scale 1→1.5x + white flash + fade
+  // -----------------------------------------------------------------
+
+  _playCollectBurst(sprite) {
+    if (!sprite) return;
+    this.scene.tweens.killTweensOf(sprite);
+    this.scene.tweens.add({
+      targets: sprite,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 150,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        sprite.setTint(0xffffff);
+        this.scene.tweens.add({
+          targets: sprite,
+          alpha: 0,
+          duration: 100,
+          onComplete: () => sprite.destroy(),
+        });
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------
+  //  EliteShard sparkle — 1 purple/gold particle every 300ms while idle
+  // -----------------------------------------------------------------
+
+  _updateEliteShardSparkle(drop, delta) {
+    drop.sparkleTimer += delta;
+    if (drop.sparkleTimer < 300) return;
+    drop.sparkleTimer = 0;
+
+    const originX = drop.x;
+    const originY = drop.sprite ? drop.sprite.y : drop.y;
+    const angle   = this.random() * Math.PI * 2;
+    const radius  = 20 + this.random() * 20;
+    const tx      = originX + Math.cos(angle) * radius;
+    const ty      = originY + Math.sin(angle) * radius;
+    const color   = this.random() > 0.5 ? 0xAA44FF : 0xFFCC00;
+
+    const p = this.scene.add.graphics().setDepth(9);
+    p.setPosition(originX, originY);
+    p.fillStyle(color, 0.9);
+    p.fillCircle(0, 0, 3); // draw at (0,0) relative to Graphics position
+
+    this.scene.tweens.add({
+      targets: p,
+      x: tx,
+      y: ty,
+      alpha: 0,
+      scaleX: 0.3,
+      scaleY: 0.3,
+      duration: 500 + this.random() * 300,
+      ease: 'Quad.easeOut',
+      onComplete: () => p.destroy(),
+    });
   }
 
   // -----------------------------------------------------------------
@@ -456,20 +457,8 @@ export class GroundDropManager {
   }
 
   // -----------------------------------------------------------------
-  //  Helpers
+  //  Cleanup
   // -----------------------------------------------------------------
-
-  _destroyDrop(drop) {
-    if (drop.gfx) {
-      this.scene.tweens.killTweensOf(drop.gfx);
-      drop.gfx.destroy();
-      drop.gfx = null;
-    }
-    if (drop.label) {
-      drop.label.destroy();
-      drop.label = null;
-    }
-  }
 
   destroy() {
     for (const drop of this.drops) {
