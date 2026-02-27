@@ -368,6 +368,23 @@ export class GameScene extends Scene {
   }
 
   drawEnemyHealthBars() {
+    // Dirty-flag guard: skip clear+redraw if no enemy HP or shield has changed since last draw.
+    // TwinLaser ticks at 100ms intervals — dirty flag correctly detects the change each tick
+    // and redraws, enabling CMBT-02 real-time HP drain.
+    let anyChanged = false;
+    this.enemies.getChildren().forEach(e => {
+      if (!e.active) return;
+      const hp = e.getData('hp');
+      const shield = e.getData('shield');
+      const lastHP = e.getData('_lastHPDrawn');
+      const lastShield = e.getData('_lastShieldDrawn');
+      if (hp !== lastHP || shield !== lastShield) {
+        anyChanged = true;
+      }
+    });
+
+    if (!anyChanged) return; // Nothing changed — skip clear+redraw this frame
+
     this.enemyHPBars.clear();
     this.enemies.getChildren().forEach(e => {
       if (!e.active) return;
@@ -379,6 +396,10 @@ export class GameScene extends Scene {
       const barH = 5;
       const x = e.x - barW / 2;
       let y = e.y - 45;
+
+      // Store drawn values for dirty-flag check next frame
+      e.setData('_lastHPDrawn', hp);
+      e.setData('_lastShieldDrawn', e.getData('shield') || 0);
 
       // Draw shield bar above health bar for shielded enemies
       const shield = e.getData('shield') || 0;
