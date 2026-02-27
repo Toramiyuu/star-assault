@@ -23,11 +23,9 @@ export class XPManager {
   }
 
   getThreshold() {
-    const wave = this.scene.waveManager?.currentWave || 1;
-    if (wave <= 3) return 50;
-    if (wave <= 6) return 90;
-    if (wave <= 9) return 140;
-    return 200;
+    // Grows with level: 50 XP for level 0→1, +20 per subsequent level
+    // Level  0: 50,  5: 150,  10: 250,  20: 450
+    return 50 + this.level * 20;
   }
 
   getXPForEnemy(enemyType) {
@@ -94,6 +92,12 @@ export class XPManager {
       if (dist < COLLECT_DISTANCE) {
         this.addXP(orb.xp);
         this.orbs.splice(i, 1);
+        continue;
+      }
+
+      // Magnetized orbs are tweened by GroundDropManager — skip physics, just draw
+      if (orb.magnetized) {
+        this._drawOrb(this._gfx, orb, time);
         continue;
       }
 

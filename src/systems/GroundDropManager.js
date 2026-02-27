@@ -1,5 +1,11 @@
 import { GAME } from '../config/constants.js';
 
+// Safe spawn area — drops outside this range can't be reached by the player
+const SPAWN_X_MIN = 80;
+const SPAWN_X_MAX = GAME.WIDTH - 80;   // 1000
+const SPAWN_Y_MIN = 200;
+const SPAWN_Y_MAX = GAME.HEIGHT - 220; // 1700
+
 // --- Drop type definitions ---
 const DROPS = {
   heart:       { color: 0xFF4444, chance: 0.05, label: 'HP',    shape: 'heart' },
@@ -94,13 +100,19 @@ export class GroundDropManager {
   //  Internal — create a single drop object (sprite-based)
   // -----------------------------------------------------------------
 
-  _createDrop(x, y, type) {
+  _createDrop(rawX, rawY, type) {
     const cfg = DROPS[type];
     if (!cfg) return;
 
+    // Clamp to safe play area — prevent spawning in unreachable top/bottom strips
+    const x = Math.max(SPAWN_X_MIN, Math.min(SPAWN_X_MAX, rawX));
+    const y = Math.max(SPAWN_Y_MIN, Math.min(SPAWN_Y_MAX, rawY));
+
     const sprite = this.scene.add.image(x, y, `drop_${type}`);
     sprite.setDepth(8);
-    sprite.setScale(1.0); // 80px texture renders at 80px; legible at 1080px wide mobile
+    // Scale to ~60 game units regardless of texture size (AI PNG ~1024px vs programmatic 80px)
+    const texW = sprite.width || 80;
+    sprite.setScale(60 / texW);
 
     const drop = {
       x,
@@ -236,18 +248,26 @@ export class GroundDropManager {
       }
 
       case 'magnet': {
-        // FIX: iterate xpManager.orbs array directly (NOT orbGroup.getChildren — that crashes)
+        // Tween all orbs toward player so they visibly rush in (no instant teleport)
         if (scene.xpManager && scene.xpManager.orbs) {
-          const mpx = scene.player.x;
-          const mpy = scene.player.y;
-          scene.xpManager.orbs.forEach(orb => {
-            orb.x = mpx;
-            orb.y = mpy;
-            orb.vx = 0;
-            orb.vy = 0;
+          const px = scene.player.x;
+          const py = scene.player.y;
+          scene.xpManager.orbs.forEach((orb, i) => {
+            if (orb.magnetized) return;
+            orb.magnetized = true;
+            scene.tweens.add({
+              targets: orb,
+              x: px,
+              y: py,
+              duration: 700,
+              delay: i * 35,
+              ease: 'Cubic.easeIn',
+            });
           });
         }
-        break;
+        if (drop.sprite) { drop.sprite.destroy(); drop.sprite = null; }
+        this._playMagnetPulse(scene.player.x, scene.player.y);
+        return; // skip _playCollectBurst — pulse ring is the feedback
       }
 
       case 'boost': {
@@ -285,8 +305,8 @@ export class GroundDropManager {
     this.scene.tweens.killTweensOf(sprite);
     this.scene.tweens.add({
       targets: sprite,
-      scaleX: 1.5,
-      scaleY: 1.5,
+      scaleX: 0.09,
+      scaleY: 0.09,
       duration: 150,
       ease: 'Back.easeOut',
       onComplete: () => {
@@ -298,6 +318,51 @@ export class GroundDropManager {
           onComplete: () => sprite.destroy(),
         });
       },
+    });
+  }
+
+  // -----------------------------------------------------------------
+  //  Magnet pulse — cyan rings expand from player + floating text
+  // -----------------------------------------------------------------
+
+  _playMagnetPulse(x, y) {
+    const scene = this.scene;
+
+    const makeRing = (delay, radius, color, alpha, duration) => {
+      const ring = scene.add.graphics().setDepth(20);
+      ring.lineStyle(3, color, alpha);
+      ring.strokeCircle(0, 0, radius);
+      ring.setPosition(x, y);
+      scene.tweens.add({
+        targets: ring,
+        scaleX: 7, scaleY: 7,
+        alpha: 0,
+        duration,
+        delay,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    };
+
+    makeRing(0,   45, 0x00DDFF, 0.9, 550);
+    makeRing(120, 45, 0x44AAFF, 0.6, 450);
+    makeRing(240, 45, 0x0088CC, 0.4, 380);
+
+    const txt = scene.add.text(x, y - 50, 'MAGNET!', {
+      fontFamily: 'Arial',
+      fontSize: '34px',
+      color: '#00DDFF',
+      fontStyle: 'bold',
+      stroke: '#003366',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(21);
+    scene.tweens.add({
+      targets: txt,
+      y: y - 130,
+      alpha: 0,
+      duration: 900,
+      ease: 'Quad.easeOut',
+      onComplete: () => txt.destroy(),
     });
   }
 
