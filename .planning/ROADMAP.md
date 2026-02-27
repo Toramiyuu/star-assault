@@ -76,12 +76,12 @@ Plans:
   3. The twin laser shows a sustained glow highlight on the enemy currently targeted by the beam
   4. Enemies killed by any weapon (including TwinLaser and bombs) produce a particle burst of 5-8 colored particles — no enemy silently disappears
   5. TwinLaser kills and bomb kills correctly increment kill streak, trigger ground drop spawns, and award XP orbs — AoE weapons behave the same as direct-fire weapons
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Extract shared killEnemy() to CombatUtils.js; wire TwinLaser and bomb kills through it to fix kill streak, drops, and XP (prerequisite for rest of phase)
-- [ ] 03-02: Implement enemy hit flash via preFX.addGlow() (white, 60ms yoyo tween); add death particle burst (5-8 particles, NORMAL blend mode)
-- [ ] 03-03: Add TwinLaser sustained glow on target (preFX.addGlow() while beam contacts); add health bar drain tug animation on enemy HP bars during laser contact
+- [ ] 03-01-PLAN.md — Extract killEnemy() to CombatUtils.js; wire TwinLaser, bomb AoE, and PhotonDevastator kill paths through it (CMBT-04)
+- [ ] 03-02-PLAN.md — Load craftpix explosion/fragment assets; implement flashEnemy() hit flash (white/red/cyan/crit variants); craftpix death explosion + 4 fragment scatter (CMBT-01, CMBT-03)
+- [ ] 03-03-PLAN.md — TwinLaser cyan glow ring + 100ms kill linger; drawEnemyHealthBars dirty-flag guard; real-time HP drain during beam contact (CMBT-02, POL-03)
 
 ### Phase 4: Floating Text + Combat Polish
 **Goal**: Kill events, critical hits, and level-ups are punctuated with satisfying text and animation feedback — the game communicates its rewards clearly
