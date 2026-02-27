@@ -76,6 +76,7 @@ Progress: [█████░░░░░] 50%
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: HUD Layout Rethink — reposition/resize HUD based on Survivor.io best practices; current HUD too small (URGENT)
+- Phase 3.1 inserted after Phase 3: Visual Asset Utilization — player ship distinction, per-enemy craftpix sprite sets, weapon directionality, engine exhaust effects, per-set death animations, shooting effects (INSERTED)
 
 ### Pending Todos
 
